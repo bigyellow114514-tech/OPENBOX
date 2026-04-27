@@ -44,11 +44,17 @@ public class TreeClick : MonoBehaviour
         }
     }
 
+    static readonly int[] _weightBuf = new int[6];
+
     void SpawnBox()
     {
         if (boxSprites == null || boxSprites.Length == 0) return;
 
-        Sprite sprite = boxSprites[Random.Range(0, boxSprites.Length)];
+        int treeLevel = TreeExpManager.Instance != null ? TreeExpManager.Instance.Level : 1;
+        TreeExpManager.GetBoxWeights(treeLevel, _weightBuf);
+
+        int count = Mathf.Min(boxSprites.Length, 6);
+        Sprite sprite = boxSprites[PickWeighted(_weightBuf, count)];
         Bounds bounds = col.bounds;
 
         float offsetX = Random.Range(-bounds.size.x * 0.25f, bounds.size.x * 0.25f);
@@ -100,5 +106,21 @@ public class TreeClick : MonoBehaviour
             }
         }
         return (1f, 1f);
+    }
+
+    // Weighted random: returns index in [0, count) using first `count` values of weights[]
+    static int PickWeighted(int[] weights, int count)
+    {
+        int total = 0;
+        for (int i = 0; i < count; i++) total += weights[i];
+        if (total <= 0) return 0;
+
+        int roll = Random.Range(0, total);
+        for (int i = 0; i < count; i++)
+        {
+            if (roll < weights[i]) return i;
+            roll -= weights[i];
+        }
+        return count - 1;
     }
 }
