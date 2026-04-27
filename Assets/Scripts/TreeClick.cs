@@ -40,6 +40,7 @@ public class TreeClick : MonoBehaviour
         {
             StartCoroutine(PunchScale());
             SpawnBox();
+            PlayerExpManager.Instance?.AddExp(10f);
         }
     }
 
