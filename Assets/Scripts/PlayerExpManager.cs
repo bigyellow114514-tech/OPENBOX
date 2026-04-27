@@ -11,11 +11,14 @@ public class PlayerExpManager : MonoBehaviour
     public event System.Action OnExpChanged;
 
     const int MaxLevel = 100;
+    const string KeyLevel = "PlayerLevel";
+    const string KeyExp   = "PlayerExp";
 
     void Awake()
     {
         if (Instance != null) { Destroy(gameObject); return; }
         Instance = this;
+        Load();
     }
 
     public void AddExp(float amount)
@@ -33,6 +36,30 @@ public class PlayerExpManager : MonoBehaviour
         if (Level >= MaxLevel)
             CurrentExp = 0f;
 
+        Save();
+        OnExpChanged?.Invoke();
+    }
+
+    void Save()
+    {
+        PlayerPrefs.SetInt(KeyLevel, Level);
+        PlayerPrefs.SetFloat(KeyExp, CurrentExp);
+        PlayerPrefs.Save();
+    }
+
+    void Load()
+    {
+        Level      = PlayerPrefs.GetInt(KeyLevel, 1);
+        CurrentExp = PlayerPrefs.GetFloat(KeyExp, 0f);
+    }
+
+    public void ResetToDefault()
+    {
+        Level      = 1;
+        CurrentExp = 0f;
+        PlayerPrefs.DeleteKey(KeyLevel);
+        PlayerPrefs.DeleteKey(KeyExp);
+        PlayerPrefs.Save();
         OnExpChanged?.Invoke();
     }
 

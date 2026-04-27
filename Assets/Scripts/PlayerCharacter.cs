@@ -47,4 +47,10 @@ public class PlayerCharacter : MonoBehaviour
         _equipAttr -= attr;
         OnAttrChanged?.Invoke();
     }
+
+    public void ResetEquipAttr()
+    {
+        _equipAttr = default;
+        OnAttrChanged?.Invoke();
+    }
 }

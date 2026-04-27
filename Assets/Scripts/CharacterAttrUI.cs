@@ -51,6 +51,12 @@ public class CharacterAttrUI : MonoBehaviour
         if (GUI.Button(new Rect(10, 10, 70, 28), "角色属性", _btnStyle))
             _show = !_show;
 
+        if (GUI.Button(new Rect(86, 10, 70, 28), "初始化角色", _btnStyle))
+        {
+            PlayerExpManager.Instance?.ResetToDefault();
+            PlayerCharacter.Instance?.ResetEquipAttr();
+        }
+
         if (!_show) return;
 
         var chr = PlayerCharacter.Instance;
