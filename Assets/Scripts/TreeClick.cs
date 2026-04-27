@@ -5,6 +5,9 @@ using UnityEngine;
 public class TreeClick : MonoBehaviour
 {
     [SerializeField] float squashAmount = 0.1f;
+    [SerializeField] Sprite[] boxSprites;
+    [SerializeField] float groundYOffset = 0f;
+    [SerializeField] float boxSizeMultiplier = 0.12f;
 
     static readonly (float time, float sx, float sy)[] Keyframes =
     {
@@ -30,7 +33,33 @@ public class TreeClick : MonoBehaviour
 
         Vector2 worldPos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
         if (col.OverlapPoint(worldPos))
+        {
             StartCoroutine(PunchScale());
+            SpawnBox();
+        }
+    }
+
+    void SpawnBox()
+    {
+        if (boxSprites == null || boxSprites.Length == 0) return;
+
+        Sprite sprite = boxSprites[Random.Range(0, boxSprites.Length)];
+        Bounds bounds = col.bounds;
+
+        float offsetX = Random.Range(-bounds.size.x * 0.25f, bounds.size.x * 0.25f);
+        float spawnY = bounds.max.y - bounds.size.y * 0.2f;
+        float boxSize = bounds.size.x * boxSizeMultiplier;
+        float groundY = bounds.min.y + boxSize * 0.5f + groundYOffset;
+
+        var go = new GameObject("BoxDrop");
+        go.transform.position = new Vector3(transform.position.x + offsetX, spawnY, transform.position.z - 0.1f);
+        go.transform.localScale = Vector3.one * boxSize;
+
+        var sr = go.AddComponent<SpriteRenderer>();
+        sr.sprite = sprite;
+        sr.sortingOrder = 1;
+
+        go.AddComponent<BoxDropHelper>().StartDrop(groundY);
     }
 
     IEnumerator PunchScale()

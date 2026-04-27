@@ -363,6 +363,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   squashAmount: 0.1
+  boxSprites:
+  - {fileID: 21300000, guid: 4df2b2b63129d0343a13fa38fd3a3f20, type: 3}
+  - {fileID: 21300000, guid: 3a57b086412cd394382ae49e27059d82, type: 3}
+  - {fileID: 21300000, guid: d7c721cba721a584395f3a7aa68ec55c, type: 3}
+  - {fileID: 21300000, guid: dce18f66b22744745a5fcb6baadd114d, type: 3}
+  - {fileID: 21300000, guid: 96dba885fbde77f47ad6d78c3ae23c2f, type: 3}
+  - {fileID: 21300000, guid: 7ffee5e2caa507e48a562f710881cc06, type: 3}
 --- !u!1 &519420028
 GameObject:
   m_ObjectHideFlags: 0
