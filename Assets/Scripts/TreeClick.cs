@@ -27,6 +27,10 @@ public class TreeClick : MonoBehaviour
         restScale = transform.localScale;
     }
 
+    public static bool Locked { get; private set; }
+
+    public static void Unlock() => Locked = false;
+
     void Update()
     {
         if (!Input.GetMouseButtonDown(0) || isAnimating) return;

@@ -69,6 +69,7 @@ public class BoxDropHelper : MonoBehaviour
             yield return null;
         }
 
+        EquipmentPanel.Instance?.ShowPanel();
         Destroy(gameObject);
     }
 }
