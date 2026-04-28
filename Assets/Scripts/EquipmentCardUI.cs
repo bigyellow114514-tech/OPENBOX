@@ -18,7 +18,9 @@ public class EquipmentCardUI : MonoBehaviour
     [Header("Bottom")]
     [SerializeField] TMP_Text    descriptionText;
 
-    [Header("Close")]
+    [Header("Buttons")]
+    [SerializeField] Button      equipButton;
+    [SerializeField] Button      decomposeButton;
     [SerializeField] Button      closeButton;
 
     [Header("Animation")]
@@ -27,7 +29,8 @@ public class EquipmentCardUI : MonoBehaviour
     [Header("字体 —— 拖入支持中文的 TMP Font Asset")]
     [SerializeField] TMP_FontAsset chineseFontAsset;
 
-    CanvasGroup _canvasGroup;
+    CanvasGroup    _canvasGroup;
+    EquipmentResult _currentItem;
 
     // 运行时兜底：从系统字体动态生成（Inspector 已赋字体时不走此路）
     static TMP_FontAsset _runtimeFont;
@@ -36,6 +39,8 @@ public class EquipmentCardUI : MonoBehaviour
     {
         Instance = this;
         _canvasGroup = GetComponent<CanvasGroup>();
+        equipButton?.onClick.AddListener(OnEquip);
+        decomposeButton?.onClick.AddListener(OnDecompose);
         closeButton?.onClick.AddListener(Hide);
         gameObject.SetActive(false);
 
@@ -70,6 +75,7 @@ public class EquipmentCardUI : MonoBehaviour
             TreeClick.Unlock();
             return;
         }
+        _currentItem = data;
         Populate(data);
         // 在所有 StatRow 实例化完成后统一赋字体
         ApplyFontToAllText();
@@ -133,13 +139,21 @@ public class EquipmentCardUI : MonoBehaviour
         row.GetComponent<StatRowUI>().Set(label, value, fmt, suffix);
     }
 
-    // ── 临时关闭按钮 ──────────────────────────────────────
+    // ── 按钮回调 ─────────────────────────────────────────
 
-    void OnGUI()
+    void OnEquip()
     {
-        if (!gameObject.activeSelf) return;
-        if (GUI.Button(new Rect(Screen.width / 2f + 180, Screen.height / 2f - 150, 60, 28), "关闭"))
-            Hide();
+        if (_currentItem == null) return;
+        EquipmentSlotSystem.Instance?.Equip(_currentItem);
+        Hide();
+    }
+
+    void OnDecompose()
+    {
+        if (_currentItem == null) return;
+        EquipmentSlotSystem.Instance?.Decompose(_currentItem);
+        _currentItem = null;
+        Hide();
     }
 
     // ── 动画 ─────────────────────────────────────────────

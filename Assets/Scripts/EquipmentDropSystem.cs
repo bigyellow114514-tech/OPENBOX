@@ -32,10 +32,11 @@ public class EquipmentDropSystem : MonoBehaviour
         // 最终属性 = 基础值 × (1 + 品质系数) × (1 + 部位系数)
         return new EquipmentResult
         {
-            itemName  = GetItemName(slot, equipLevel),
-            slotName  = SlotNames[slot],
-            icon      = GetIcon(equipLevel),
-            rarity    = rarityIndex + 1,
+            itemName   = GetItemName(slot, equipLevel),
+            slotName   = SlotNames[slot],
+            icon       = GetIcon(equipLevel),
+            rarity     = rarityIndex + 1,
+            equipLevel = equipLevel,
             bonusAttr = new RoleAttr
             {
                 Attack  = Mathf.Round(baseAttr.Attack  * (1f + rarCoef.Attack)  * (1f + sltCoef.Attack)),
