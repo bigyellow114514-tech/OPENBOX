@@ -3,8 +3,11 @@ using UnityEngine;
 
 public class BoxDropHelper : MonoBehaviour
 {
-    public void StartDrop(float groundY)
+    int _rarityIndex;
+
+    public void StartDrop(float groundY, int rarityIndex)
     {
+        _rarityIndex = rarityIndex;
         StartCoroutine(DropAnimation(groundY));
     }
 
@@ -69,7 +72,29 @@ public class BoxDropHelper : MonoBehaviour
             yield return null;
         }
 
-        EquipmentPanel.Instance?.ShowPanel();
+        int playerLevel = PlayerExpManager.Instance != null ? PlayerExpManager.Instance.Level : 1;
+        Debug.Log($"[BoxDrop] 动画结束，准备弹 UI。rarityIndex={_rarityIndex} playerLevel={playerLevel}");
+
+        if (EquipmentDropSystem.Instance == null)
+        {
+            Debug.LogError("[BoxDrop] EquipmentDropSystem 不在场景中，请执行 OpenBox → Setup Equipment Drop System");
+            TreeClick.Unlock();
+            Destroy(gameObject);
+            yield break;
+        }
+
+        EquipmentResult result = EquipmentDropSystem.Instance.GenerateDrop(_rarityIndex, playerLevel);
+        Debug.Log($"[BoxDrop] 生成装备：{result.itemName} 槽位={result.slotName} 品质={result.rarity}");
+
+        if (EquipmentCardUI.Instance == null)
+        {
+            Debug.LogError("[BoxDrop] EquipmentCardUI 不在场景中，请执行 OpenBox → Build Equipment Card UI");
+            TreeClick.Unlock();
+            Destroy(gameObject);
+            yield break;
+        }
+
+        EquipmentCardUI.Instance.Show(result);
         Destroy(gameObject);
     }
 }

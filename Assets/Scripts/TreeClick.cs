@@ -29,11 +29,12 @@ public class TreeClick : MonoBehaviour
 
     public static bool Locked { get; private set; }
 
+    public static void Lock()   => Locked = true;
     public static void Unlock() => Locked = false;
 
     void Update()
     {
-        if (!Input.GetMouseButtonDown(0) || isAnimating) return;
+        if (!Input.GetMouseButtonDown(0) || isAnimating || Locked) return;
 
         Vector2 worldPos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
         if (col.OverlapPoint(worldPos))
@@ -53,9 +54,10 @@ public class TreeClick : MonoBehaviour
         int treeLevel = TreeExpManager.Instance != null ? TreeExpManager.Instance.Level : 1;
         TreeExpManager.GetBoxWeights(treeLevel, _weightBuf);
 
-        int count = Mathf.Min(boxSprites.Length, 6);
-        Sprite sprite = boxSprites[PickWeighted(_weightBuf, count)];
-        Bounds bounds = col.bounds;
+        int count       = Mathf.Min(boxSprites.Length, 6);
+        int rarityIndex = PickWeighted(_weightBuf, count);
+        Sprite sprite   = boxSprites[rarityIndex];
+        Bounds bounds   = col.bounds;
 
         float offsetX = Random.Range(-bounds.size.x * 0.25f, bounds.size.x * 0.25f);
         float spawnY = bounds.max.y - bounds.size.y * 0.2f;
@@ -70,7 +72,8 @@ public class TreeClick : MonoBehaviour
         sr.sprite = sprite;
         sr.sortingOrder = 1;
 
-        go.AddComponent<BoxDropHelper>().StartDrop(groundY);
+        TreeClick.Lock();
+        go.AddComponent<BoxDropHelper>().StartDrop(groundY, rarityIndex);
     }
 
     IEnumerator PunchScale()

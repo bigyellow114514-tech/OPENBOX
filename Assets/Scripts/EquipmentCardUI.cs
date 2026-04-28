@@ -4,34 +4,75 @@ using TMPro;
 
 public class EquipmentCardUI : MonoBehaviour
 {
+    public static EquipmentCardUI Instance { get; private set; }
+
     [Header("Top Row")]
     [SerializeField] Image       iconImage;
     [SerializeField] TMP_Text    nameText;
     [SerializeField] TMP_Text    slotText;
 
     [Header("Stats Area")]
-    [SerializeField] Transform   statsContainer; // VerticalLayoutGroup
-    [SerializeField] GameObject  statRowPrefab;  // 含两个 TMP_Text 的预制体
+    [SerializeField] Transform   statsContainer;
+    [SerializeField] GameObject  statRowPrefab;
 
     [Header("Bottom")]
     [SerializeField] TMP_Text    descriptionText;
 
+    [Header("Close")]
+    [SerializeField] Button      closeButton;
+
     [Header("Animation")]
     [SerializeField] float       animDuration = 0.25f;
 
+    [Header("字体 —— 拖入支持中文的 TMP Font Asset")]
+    [SerializeField] TMP_FontAsset chineseFontAsset;
+
     CanvasGroup _canvasGroup;
+
+    // 运行时兜底：从系统字体动态生成（Inspector 已赋字体时不走此路）
+    static TMP_FontAsset _runtimeFont;
 
     void Awake()
     {
+        Instance = this;
         _canvasGroup = GetComponent<CanvasGroup>();
+        closeButton?.onClick.AddListener(Hide);
         gameObject.SetActive(false);
+
+        if (chineseFontAsset == null)
+            EnsureRuntimeFont();
+    }
+
+    static void EnsureRuntimeFont()
+    {
+        if (_runtimeFont != null) return;
+        string[] candidates = { "Microsoft YaHei", "微软雅黑", "SimHei", "黑体", "NSimSun", "Heiti SC", "STHeiti" };
+        Font osFont = Font.CreateDynamicFontFromOSFont(candidates, 32);
+        if (osFont == null) return;
+        _runtimeFont = TMP_FontAsset.CreateFontAsset(osFont);
+    }
+
+    void ApplyFontToAllText()
+    {
+        TMP_FontAsset font = chineseFontAsset != null ? chineseFontAsset : _runtimeFont;
+        if (font == null) return;
+        foreach (var tmp in GetComponentsInChildren<TMP_Text>(true))
+            tmp.font = font;
     }
 
     // ── 公共接口 ──────────────────────────────────────────
 
-    public void Show(EquipmentItem data)
+    public void Show(EquipmentResult data)
     {
+        if (data == null)
+        {
+            Debug.LogError("EquipmentCardUI.Show: data 为 null，无法显示");
+            TreeClick.Unlock();
+            return;
+        }
         Populate(data);
+        // 在所有 StatRow 实例化完成后统一赋字体
+        ApplyFontToAllText();
         gameObject.SetActive(true);
         StopAllCoroutines();
         StartCoroutine(AnimateFade(0f, 1f));
@@ -40,20 +81,30 @@ public class EquipmentCardUI : MonoBehaviour
     public void Hide()
     {
         StopAllCoroutines();
-        StartCoroutine(AnimateFade(1f, 0f, onDone: () => gameObject.SetActive(false)));
+        StartCoroutine(AnimateFade(1f, 0f, onDone: () =>
+        {
+            gameObject.SetActive(false);
+            TreeClick.Unlock();
+        }));
     }
 
     // ── 填充数据 ──────────────────────────────────────────
 
-    void Populate(EquipmentItem data)
+    void Populate(EquipmentResult data)
     {
-        iconImage.sprite  = data.icon;
-        iconImage.enabled = data.icon != null;
-        nameText.text     = data.itemName;
-        slotText.text     = "槽位：" + data.slotType;
-        descriptionText.text = data.description;
+        iconImage.sprite     = data.icon;
+        iconImage.enabled    = data.icon != null;
+        nameText.text        = data.itemName;
+        slotText.text        = "槽位：" + data.slotName;
+        descriptionText.text = RarityStars(data.rarity);
 
         BuildStatRows(data.bonusAttr);
+    }
+
+    static string RarityStars(int rarity)
+    {
+        int r = Mathf.Clamp(rarity, 1, 6);
+        return new string('★', r) + new string('☆', 6 - r);
     }
 
     void BuildStatRows(RoleAttr attr)
@@ -80,6 +131,15 @@ public class EquipmentCardUI : MonoBehaviour
 
         var row = Instantiate(statRowPrefab, statsContainer);
         row.GetComponent<StatRowUI>().Set(label, value, fmt, suffix);
+    }
+
+    // ── 临时关闭按钮 ──────────────────────────────────────
+
+    void OnGUI()
+    {
+        if (!gameObject.activeSelf) return;
+        if (GUI.Button(new Rect(Screen.width / 2f + 180, Screen.height / 2f - 150, 60, 28), "关闭"))
+            Hide();
     }
 
     // ── 动画 ─────────────────────────────────────────────

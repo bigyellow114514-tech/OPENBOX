@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4793655f653b2d94e98574f48bfd222c, type: 3}
+  m_Name: "\u9F99\u9CDE\u5934\u76D4"
+  m_EditorClassIdentifier: 
+  itemName: "\u9F99\u9CDE\u5934\u76D4"
+  slotType: "\u5934\u76D4"
+  icon: {fileID: 21300000, guid: bf3e4f242c670784a9f59c836aa33bbc, type: 3}
+  description: "\u4EE5\u8FDC\u53E4\u9F99\u9CDE\u5236\u6210\uFF0C\u6563\u53D1\u7740\u795E\u79D8\u5149\u6CFD\u3002"
+  bonusAttr:
+    Attack: 0
+    Defence: 15
+    Hp: 80
+    Agility: 0
+    CritRate: 0
+    CritDmg: 0
+    CounterRate: 0
+    ComboRate: 0
+    DodgeRate: 0
+    StunRate: 5
+    LifeStealRate: 0
