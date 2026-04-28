@@ -48,16 +48,13 @@ public class EquipmentPanel : MonoBehaviour
 
         Vector2 worldPos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
 
-        foreach (Transform child in panelRoot.transform)
+        foreach (var sr in panelRoot.GetComponentsInChildren<SpriteRenderer>())
         {
-            if (!child.name.StartsWith("Equip_x")) continue;
-            var sr = child.GetComponent<SpriteRenderer>();
-            if (sr != null && sr.bounds.Contains(new Vector3(worldPos.x, worldPos.y, sr.bounds.center.z)))
-            {
-                HidePanel();
+            if (sr.bounds.Contains(new Vector3(worldPos.x, worldPos.y, sr.bounds.center.z)))
                 return;
-            }
         }
+
+        HidePanel();
     }
 
     void SpawnItems()

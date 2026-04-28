@@ -65,6 +65,19 @@ public class EquipmentCardUI : MonoBehaviour
             tmp.font = font;
     }
 
+    void Update()
+    {
+        if (!Input.GetMouseButtonDown(0)) return;
+
+        RectTransform rt = GetComponent<RectTransform>();
+        Canvas canvas = GetComponentInParent<Canvas>();
+        Camera cam = (canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay)
+            ? canvas.worldCamera : null;
+
+        if (!RectTransformUtility.RectangleContainsScreenPoint(rt, Input.mousePosition, cam))
+            Hide();
+    }
+
     // ── 公共接口 ──────────────────────────────────────────
 
     public void Show(EquipmentResult data)

@@ -52,6 +52,8 @@ public class EquipmentDropSystem : MonoBehaviour
 
     static readonly int[] LevelLimits = { 9, 19, 29, 39, 49, 59, 69, 79 };
 
+    public Sprite GetIconForLevel(int level) => GetIcon(level);
+
     Sprite GetIcon(int playerLevel)
     {
         if (itemIcons == null || itemIcons.Length == 0) return null;
