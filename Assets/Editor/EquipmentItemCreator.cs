@@ -3,7 +3,7 @@ using UnityEditor;
 
 public static class EquipmentItemCreator
 {
-    [MenuItem("OpenBox/Create Sample Equipment Items")]
+    [MenuItem("OpenBox/装备系统/创建示例装备数据")]
     static void CreateSampleItems()
     {
         EnsureAllIconsAreSprites();

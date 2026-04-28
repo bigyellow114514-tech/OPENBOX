@@ -4,7 +4,7 @@ using UnityEditor.SceneManagement;
 
 public static class EquipmentDropSystemBuilder
 {
-    [MenuItem("OpenBox/Setup Equipment Drop System")]
+    [MenuItem("OpenBox/装备系统/配置掉落系统")]
     static void Setup()
     {
         EnsureIconsAreSprites();

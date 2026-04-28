@@ -8,20 +8,29 @@ using TMPro;
 public static class EquipmentCardBuilder
 {
     const string StatRowPrefabPath = "Assets/Prefabs/StatRow.prefab";
+    const string FontPath          = "Assets/Fonts/msyh SDF.asset";
 
-    [MenuItem("OpenBox/Build Equipment Card UI")]
+    [MenuItem("OpenBox/UI 构建/构建装备卡片")]
     static void Build()
     {
         EnsureEquipYIsSprite();
         EnsureEquipXIsSprite();
 
+        var font          = LoadFont();
         var canvas        = GetOrCreateCanvas();
-        var statRowPrefab = CreateStatRowPrefab();
-        var card          = BuildCardHierarchy(canvas.transform, statRowPrefab);
+        var statRowPrefab = CreateStatRowPrefab(font);
+        var card          = BuildCardHierarchy(canvas.transform, statRowPrefab, font);
 
         Selection.activeGameObject = card;
         EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
         Debug.Log("[EquipmentCardBuilder] 完成！请按 Ctrl+S 保存场景。");
+    }
+
+    static TMP_FontAsset LoadFont()
+    {
+        var font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);
+        if (font == null) Debug.LogWarning($"[EquipmentCardBuilder] 找不到字体 {FontPath}，中文可能显示乱码");
+        return font;
     }
 
     // ── 1. 确保 Equip_y.png 是 Sprite 类型 ────────────────────────────
@@ -89,11 +98,11 @@ public static class EquipmentCardBuilder
 
     // ── 测试：直接在运行时强制弹出卡片 ───────────────────────────────────
 
-    [MenuItem("OpenBox/Test Equipment Card (Runtime only)")]
+    [MenuItem("OpenBox/测试/测试装备卡片（仅运行时）")]
     static void TestShow()
     {
         var ui = Object.FindObjectOfType<EquipmentCardUI>();
-        if (ui == null) { Debug.LogError("场景中没有 EquipmentCardUI，请先执行 Build Equipment Card UI"); return; }
+        if (ui == null) { Debug.LogError("场景中没有 EquipmentCardUI，请先执行 OpenBox → UI 构建 → 构建装备卡片"); return; }
 
         var dummy = new EquipmentResult
         {
@@ -109,7 +118,7 @@ public static class EquipmentCardBuilder
 
     // ── 3. StatRow 预制体 ──────────────────────────────────────────────
 
-    static GameObject CreateStatRowPrefab()
+    static GameObject CreateStatRowPrefab(TMP_FontAsset font)
     {
         if (!AssetDatabase.IsValidFolder("Assets/Prefabs"))
             AssetDatabase.CreateFolder("Assets", "Prefabs");
@@ -143,6 +152,7 @@ public static class EquipmentCardBuilder
         labelText.fontSize  = 13;
         labelText.alignment = TextAlignmentOptions.MidlineLeft;
         labelText.color     = new Color(0.85f, 0.75f, 0.50f);
+        if (font != null) labelText.font = font;
         labelGO.AddComponent<LayoutElement>().flexibleWidth = 1;
 
         // ValueText
@@ -152,6 +162,7 @@ public static class EquipmentCardBuilder
         valueText.fontSize  = 13;
         valueText.alignment = TextAlignmentOptions.MidlineRight;
         valueText.color     = new Color(0.20f, 0.78f, 0.35f);
+        if (font != null) valueText.font = font;
         var valueLE = valueGO.AddComponent<LayoutElement>();
         valueLE.preferredWidth = 70;
         valueLE.flexibleWidth  = 0;
@@ -171,7 +182,8 @@ public static class EquipmentCardBuilder
 
     // ── 4. 卡片主体 ────────────────────────────────────────────────────
 
-    static GameObject BuildCardHierarchy(Transform canvasParent, GameObject statRowPrefab)
+    static GameObject BuildCardHierarchy(Transform canvasParent, GameObject statRowPrefab,
+                                         TMP_FontAsset font)
     {
         Sprite bgSprite = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Picture/UI/Equip_y.png");
 
@@ -249,6 +261,7 @@ public static class EquipmentCardBuilder
         nameText.fontSize  = 17;
         nameText.fontStyle = FontStyles.Bold;
         nameText.color     = new Color(0.22f, 0.10f, 0.02f);
+        if (font != null) nameText.font = font;
         nameGO.AddComponent<LayoutElement>().preferredHeight = 26;
 
         var slotGO   = MakeUIGO("SlotText", infoGroup.transform);
@@ -256,6 +269,7 @@ public static class EquipmentCardBuilder
         slotText.text     = "槽位：武器";
         slotText.fontSize = 13;
         slotText.color    = new Color(0.45f, 0.28f, 0.10f);
+        if (font != null) slotText.font = font;
         slotGO.AddComponent<LayoutElement>().preferredHeight = 20;
 
         // ── BottomPanel ──
@@ -292,6 +306,7 @@ public static class EquipmentCardBuilder
         descText.fontStyle         = FontStyles.Italic;
         descText.color             = new Color(0.45f, 0.28f, 0.10f);
         descText.enableWordWrapping = true;
+        if (font != null) descText.font = font;
         var descLE = descGO.AddComponent<LayoutElement>();
         descLE.preferredHeight = 36;
         descLE.flexibleHeight  = 0;
@@ -323,13 +338,14 @@ public static class EquipmentCardBuilder
 
         // ── 连线 EquipmentCardUI 的 SerializedField ──
         var cardSO = new SerializedObject(cardUI);
-        cardSO.FindProperty("iconImage").objectReferenceValue       = itemIconImg;
-        cardSO.FindProperty("nameText").objectReferenceValue        = nameText;
-        cardSO.FindProperty("slotText").objectReferenceValue        = slotText;
-        cardSO.FindProperty("statsContainer").objectReferenceValue  = statsContainer.transform;
-        cardSO.FindProperty("statRowPrefab").objectReferenceValue   = statRowPrefab;
-        cardSO.FindProperty("descriptionText").objectReferenceValue = descText;
-        cardSO.FindProperty("closeButton").objectReferenceValue     = closeBtn;
+        cardSO.FindProperty("iconImage").objectReferenceValue        = itemIconImg;
+        cardSO.FindProperty("nameText").objectReferenceValue         = nameText;
+        cardSO.FindProperty("slotText").objectReferenceValue         = slotText;
+        cardSO.FindProperty("statsContainer").objectReferenceValue   = statsContainer.transform;
+        cardSO.FindProperty("statRowPrefab").objectReferenceValue    = statRowPrefab;
+        cardSO.FindProperty("descriptionText").objectReferenceValue  = descText;
+        cardSO.FindProperty("closeButton").objectReferenceValue      = closeBtn;
+        cardSO.FindProperty("chineseFontAsset").objectReferenceValue = font;
         cardSO.ApplyModifiedProperties();
 
         return card;

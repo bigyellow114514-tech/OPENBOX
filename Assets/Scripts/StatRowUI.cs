@@ -29,4 +29,26 @@ public class StatRowUI : MonoBehaviour
             iconImage.enabled = icon != null;
         }
     }
+
+    // 带增减对比的显示：在数值后附加彩色 delta 标注
+    public void SetWithDelta(string label, float value, float delta,
+                             string fmt = "0", string suffix = "")
+    {
+        labelText.text = label;
+
+        string prefix = value > 0f ? "+" : "";
+        string text   = prefix + value.ToString(fmt) + suffix;
+
+        if (delta > 0.001f)
+            text += $" <color=#00C832>(▲+{delta.ToString(fmt)}{suffix})</color>";
+        else if (delta < -0.001f)
+            text += $" <color=#C83200>(▼{(-delta).ToString(fmt)}{suffix})</color>";
+
+        valueText.text  = text;
+        valueText.color = value > 0f ? ColorPositive
+                        : value < 0f ? ColorNegative
+                        : ColorNeutral;
+
+        if (iconImage != null) iconImage.enabled = false;
+    }
 }

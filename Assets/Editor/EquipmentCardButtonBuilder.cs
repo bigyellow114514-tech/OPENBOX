@@ -6,7 +6,9 @@ using UnityEngine.UI;
 
 public static class EquipmentCardButtonBuilder
 {
-    [MenuItem("OpenBox/Build Equipment Card Buttons")]
+    const string FontPath = "Assets/Fonts/msyh SDF.asset";
+
+    [MenuItem("OpenBox/UI 构建/构建装备卡片按钮")]
     static void Build()
     {
         var cardUI = Object.FindObjectOfType<EquipmentCardUI>();
@@ -25,13 +27,16 @@ public static class EquipmentCardButtonBuilder
         }
         var canvasRT = canvas.GetComponent<RectTransform>();
 
+        var font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);
+        if (font == null) Debug.LogWarning($"[ButtonBuilder] 找不到字体 {FontPath}，中文可能显示乱码");
+
         // 删除旧按钮（重复执行时清理）
         RemoveChild(canvasRT, "EquipButton");
         RemoveChild(canvasRT, "DecomposeButton");
 
         // 创建两个按钮，锚定到 Canvas 中心偏下
-        var equipBtn      = CreateButton("EquipButton",      canvasRT, -90f, new Color(0.20f, 0.55f, 0.20f), "装备");
-        var decomposeBtn  = CreateButton("DecomposeButton",  canvasRT,  90f, new Color(0.75f, 0.35f, 0.10f), "分解");
+        var equipBtn      = CreateButton("EquipButton",      canvasRT, -90f, new Color(0.20f, 0.55f, 0.20f), "装备",  font);
+        var decomposeBtn  = CreateButton("DecomposeButton",  canvasRT,  90f, new Color(0.75f, 0.35f, 0.10f), "分解",  font);
 
         // 绑定到 EquipmentCardUI
         var so = new SerializedObject(cardUI);
@@ -46,7 +51,8 @@ public static class EquipmentCardButtonBuilder
 
     // ── 工具函数 ──────────────────────────────────────────────────────
 
-    static Button CreateButton(string goName, RectTransform parent, float offsetX, Color color, string label)
+    static Button CreateButton(string goName, RectTransform parent, float offsetX, Color color, string label,
+                               TMP_FontAsset font)
     {
         var go = new GameObject(goName);
         go.transform.SetParent(parent, false);
@@ -81,12 +87,13 @@ public static class EquipmentCardButtonBuilder
         labelRT.offsetMin   = Vector2.zero;
         labelRT.offsetMax   = Vector2.zero;
 
-        var tmp           = labelGo.AddComponent<TextMeshProUGUI>();
-        tmp.text          = label;
-        tmp.fontSize      = 16;
-        tmp.fontStyle     = FontStyles.Bold;
-        tmp.alignment     = TextAlignmentOptions.Center;
-        tmp.color         = Color.white;
+        var tmp       = labelGo.AddComponent<TextMeshProUGUI>();
+        tmp.text      = label;
+        tmp.fontSize  = 16;
+        tmp.fontStyle = FontStyles.Bold;
+        tmp.alignment = TextAlignmentOptions.Center;
+        tmp.color     = Color.white;
+        if (font != null) tmp.font = font;
 
         return btn;
     }

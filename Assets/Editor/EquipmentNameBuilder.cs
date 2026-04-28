@@ -23,7 +23,7 @@ public static class EquipmentNameBuilder
         "护手","腰带","项链","主戒","副戒","圣物"
     };
 
-    [MenuItem("OpenBox/Build Equipment Names from Excel")]
+    [MenuItem("OpenBox/装备系统/从 Excel 导入装备名称")]
     static void Build()
     {
         string fullPath = Path.GetFullPath(XlsxPath);

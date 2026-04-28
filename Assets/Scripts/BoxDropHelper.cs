@@ -77,7 +77,7 @@ public class BoxDropHelper : MonoBehaviour
 
         if (EquipmentDropSystem.Instance == null)
         {
-            Debug.LogError("[BoxDrop] EquipmentDropSystem 不在场景中，请执行 OpenBox → Setup Equipment Drop System");
+            Debug.LogError("[BoxDrop] EquipmentDropSystem 不在场景中，请执行 OpenBox → 装备系统 → 配置掉落系统");
             TreeClick.Unlock();
             Destroy(gameObject);
             yield break;
@@ -88,10 +88,23 @@ public class BoxDropHelper : MonoBehaviour
 
         if (EquipmentCardUI.Instance == null)
         {
-            Debug.LogError("[BoxDrop] EquipmentCardUI 不在场景中，请执行 OpenBox → Build Equipment Card UI");
+            Debug.LogError("[BoxDrop] EquipmentCardUI 不在场景中，请执行 OpenBox → UI 构建 → 构建装备卡片");
             TreeClick.Unlock();
             Destroy(gameObject);
             yield break;
+        }
+
+        // 若同槽位已有装备，弹出对比窗口；否则直接显示装备卡片
+        var existingItem = EquipmentSlotSystem.Instance?.GetSlot(result.slotIndex);
+        if (existingItem != null)
+        {
+            if (EquipmentCompareUI.Instance != null)
+            {
+                EquipmentCompareUI.Instance.Show(result, existingItem);
+                Destroy(gameObject);
+                yield break;
+            }
+            Debug.LogWarning("[BoxDrop] EquipmentCompareUI 不在场景中，请执行 OpenBox → UI 构建 → 构建装备对比窗口；已回退至普通卡片");
         }
 
         EquipmentCardUI.Instance.Show(result);
