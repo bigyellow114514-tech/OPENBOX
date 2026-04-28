@@ -1,9 +1,16 @@
-using System.IO;
 using UnityEngine;
 
 public class CombatWindowUI : MonoBehaviour
 {
     public bool IsOpen => _isOpen;
+
+    [SerializeField] Sprite playerSprite = null;
+    [SerializeField] Sprite enemySprite = null;
+    [SerializeField] Sprite playerAttackSheet = null;
+    [SerializeField] Sprite playerAttackedSheet = null;
+    [SerializeField] int animationColumns = 4;
+    [SerializeField] int animationRows = 2;
+    [SerializeField] int animationFrameCount = 8;
 
     StageData _stage;
     CombatResult _result;
@@ -18,8 +25,6 @@ public class CombatWindowUI : MonoBehaviour
     Texture2D _playerHpTex;
     Texture2D _enemyHpTex;
     Texture2D _buffTex;
-    Texture2D _knightTex;
-    Texture2D _slamTex;
 
     GUIStyle _titleStyle;
     GUIStyle _labelStyle;
@@ -35,6 +40,8 @@ public class CombatWindowUI : MonoBehaviour
 
     public void Open(StageData stage, CombatResult result)
     {
+        ResolveUnitSprites();
+
         _stage = stage;
         _result = result;
         _isOpen = true;
@@ -88,14 +95,13 @@ public class CombatWindowUI : MonoBehaviour
     {
         if (_panelTex != null) return;
 
+        ResolveUnitSprites();
+
         _panelTex = MakeTex(new Color(0.05f, 0.06f, 0.07f, 0.94f));
         _barBgTex = MakeTex(new Color(0.12f, 0.12f, 0.12f, 1f));
         _playerHpTex = MakeTex(new Color(0.16f, 0.72f, 0.32f, 1f));
         _enemyHpTex = MakeTex(new Color(0.86f, 0.22f, 0.18f, 1f));
         _buffTex = MakeTex(new Color(0.95f, 0.72f, 0.12f, 1f));
-        _knightTex = LoadTexture("Picture/Knight.png");
-        _slamTex = LoadTexture("Picture/Slam.png");
-
         _titleStyle = new GUIStyle(GUI.skin.label)
         {
             fontSize = 20,
@@ -122,6 +128,24 @@ public class CombatWindowUI : MonoBehaviour
         _healStyle = FloatingStyle(new Color(0.25f, 1f, 0.35f, 1f), 23);
         _popupStyle = FloatingStyle(new Color(1f, 0.88f, 0.18f, 1f), 22);
         _buffStyle = FloatingStyle(Color.black, 15);
+    }
+
+    void ResolveUnitSprites()
+    {
+        if (playerSprite == null)
+            playerSprite = FindChildSprite("CombatPlayerUnit");
+
+        if (enemySprite == null)
+            enemySprite = FindChildSprite("CombatEnemyUnit");
+    }
+
+    Sprite FindChildSprite(string childName)
+    {
+        Transform child = transform.Find(childName);
+        if (child == null) return null;
+
+        SpriteRenderer sr = child.GetComponent<SpriteRenderer>();
+        return sr != null ? sr.sprite : null;
     }
 
     void DrawArena(Rect arena)
@@ -151,8 +175,8 @@ public class CombatWindowUI : MonoBehaviour
         DrawHpBlock(new Rect(playerHome.x, arena.y, playerHome.width, 48f), "Player", playerHp, _result.PlayerMaxHp, _playerHpTex);
         DrawHpBlock(new Rect(enemyHome.x, arena.y, enemyHome.width, 48f), "Enemy", enemyHp, _result.EnemyMaxHp, _enemyHpTex);
 
-        DrawCharacter(playerRect, _knightTex, false);
-        DrawCharacter(enemyRect, _slamTex, true);
+        DrawPlayerCharacter(playerRect, current, progress);
+        DrawCharacter(enemyRect, enemySprite, false);
 
         bool playerStunned = current != null ? current.PlayerStunned : LastPlayerStunned();
         bool enemyStunned = current != null ? current.EnemyStunned : LastEnemyStunned();
@@ -182,9 +206,9 @@ public class CombatWindowUI : MonoBehaviour
         GUI.DrawTexture(new Rect(rect.x, rect.y + 26f, rect.width * pct, 18f), hpTex);
     }
 
-    void DrawCharacter(Rect rect, Texture2D tex, bool flip)
+    void DrawCharacter(Rect rect, Sprite sprite, bool flip)
     {
-        if (tex == null)
+        if (sprite == null || sprite.texture == null)
         {
             GUI.Box(rect, GUIContent.none);
             return;
@@ -192,15 +216,73 @@ public class CombatWindowUI : MonoBehaviour
 
         if (!flip)
         {
-            GUI.DrawTexture(rect, tex, ScaleMode.ScaleToFit, true);
+            GUI.DrawTexture(rect, sprite.texture, ScaleMode.ScaleToFit, true);
             return;
         }
 
         Matrix4x4 old = GUI.matrix;
-        GUIUtility.ScaleAroundPivot(new Vector2(-1f, 1f), new Vector2(rect.x + rect.width * 0.5f, rect.y + rect.height * 0.5f));
-        Rect flipped = new Rect(-rect.x - rect.width, rect.y, rect.width, rect.height);
-        GUI.DrawTexture(flipped, tex, ScaleMode.ScaleToFit, true);
+        GUIUtility.ScaleAroundPivot(new Vector2(-1f, 1f), rect.center);
+        GUI.DrawTexture(rect, sprite.texture, ScaleMode.ScaleToFit, true);
         GUI.matrix = old;
+    }
+
+    void DrawPlayerCharacter(Rect rect, CombatLogEntry current, float progress)
+    {
+        if (current != null && current.Type == CombatEventType.Attack)
+        {
+            if (current.ActorIsPlayer && playerAttackSheet != null)
+            {
+                DrawSheetFrame(rect, playerAttackSheet, AnimationFrame(progress), false);
+                return;
+            }
+
+            if (current.TargetIsPlayer && playerAttackedSheet != null && !current.Dodged)
+            {
+                DrawSheetFrame(rect, playerAttackedSheet, AnimationFrame(progress), false);
+                return;
+            }
+        }
+
+        DrawCharacter(rect, playerSprite, false);
+    }
+
+    void DrawSheetFrame(Rect rect, Sprite sheet, int frameIndex, bool flip)
+    {
+        if (sheet == null || sheet.texture == null)
+        {
+            GUI.Box(rect, GUIContent.none);
+            return;
+        }
+
+        int cols = Mathf.Max(1, animationColumns);
+        int rows = Mathf.Max(1, animationRows);
+        int maxFrames = Mathf.Max(1, Mathf.Min(animationFrameCount, cols * rows));
+        int frame = Mathf.Clamp(frameIndex, 0, maxFrames - 1);
+        int col = frame % cols;
+        int row = frame / cols;
+
+        Rect uv = new Rect(
+            col / (float)cols,
+            1f - ((row + 1f) / rows),
+            1f / cols,
+            1f / rows);
+
+        if (!flip)
+        {
+            GUI.DrawTextureWithTexCoords(rect, sheet.texture, uv, true);
+            return;
+        }
+
+        Matrix4x4 old = GUI.matrix;
+        GUIUtility.ScaleAroundPivot(new Vector2(-1f, 1f), rect.center);
+        GUI.DrawTextureWithTexCoords(rect, sheet.texture, uv, true);
+        GUI.matrix = old;
+    }
+
+    int AnimationFrame(float progress)
+    {
+        int maxFrames = Mathf.Max(1, Mathf.Min(animationFrameCount, Mathf.Max(1, animationColumns) * Mathf.Max(1, animationRows)));
+        return Mathf.Clamp(Mathf.FloorToInt(progress * maxFrames), 0, maxFrames - 1);
     }
 
     void DrawStunBuff(Rect characterRect)
@@ -350,16 +432,6 @@ public class CombatWindowUI : MonoBehaviour
             alignment = TextAnchor.MiddleCenter,
             normal = { textColor = color }
         };
-    }
-
-    Texture2D LoadTexture(string assetRelativePath)
-    {
-        string path = Path.Combine(Application.dataPath, assetRelativePath);
-        if (!File.Exists(path)) return null;
-
-        var tex = new Texture2D(2, 2);
-        tex.LoadImage(File.ReadAllBytes(path));
-        return tex;
     }
 
     Texture2D MakeTex(Color color)
