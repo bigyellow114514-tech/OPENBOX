@@ -31,6 +31,7 @@ public class EquipmentCardUI : MonoBehaviour
 
     CanvasGroup    _canvasGroup;
     EquipmentResult _currentItem;
+    bool           _forced;
 
     // 运行时兜底：从系统字体动态生成（Inspector 已赋字体时不走此路）
     static TMP_FontAsset _runtimeFont;
@@ -41,7 +42,7 @@ public class EquipmentCardUI : MonoBehaviour
         _canvasGroup = GetComponent<CanvasGroup>();
         equipButton?.onClick.AddListener(OnEquip);
         decomposeButton?.onClick.AddListener(OnDecompose);
-        closeButton?.onClick.AddListener(Hide);
+        closeButton?.onClick.AddListener(OnCloseButton);
         gameObject.SetActive(false);
 
         if (chineseFontAsset == null)
@@ -67,7 +68,7 @@ public class EquipmentCardUI : MonoBehaviour
 
     void Update()
     {
-        if (!Input.GetMouseButtonDown(0)) return;
+        if (_forced || !Input.GetMouseButtonDown(0)) return;
 
         RectTransform rt = GetComponent<RectTransform>();
         Canvas canvas = GetComponentInParent<Canvas>();
@@ -76,6 +77,12 @@ public class EquipmentCardUI : MonoBehaviour
 
         if (!RectTransformUtility.RectangleContainsScreenPoint(rt, Input.mousePosition, cam))
             Hide();
+    }
+
+    void OnCloseButton()
+    {
+        if (_forced) return;
+        Hide();
     }
 
     // ── 公共接口 ──────────────────────────────────────────
@@ -88,11 +95,12 @@ public class EquipmentCardUI : MonoBehaviour
             TreeClick.Unlock();
             return;
         }
+        _forced = true;
         decomposeButton?.gameObject.SetActive(true);
         equipButton?.gameObject.SetActive(true);
+        closeButton?.gameObject.SetActive(false);
         _currentItem = data;
         Populate(data);
-        // 在所有 StatRow 实例化完成后统一赋字体
         ApplyFontToAllText();
         gameObject.SetActive(true);
         StopAllCoroutines();
@@ -107,8 +115,10 @@ public class EquipmentCardUI : MonoBehaviour
             TreeClick.Unlock();
             return;
         }
+        _forced = false;
         equipButton?.gameObject.SetActive(false);
         decomposeButton?.gameObject.SetActive(false);
+        closeButton?.gameObject.SetActive(true);
         _currentItem = data;
         Populate(data);
         ApplyFontToAllText();
