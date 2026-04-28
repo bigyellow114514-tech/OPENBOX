@@ -22,6 +22,19 @@ public class EquipmentSlotSystem : MonoBehaviour
     public EquipmentResult GetSlot(int index) =>
         (index >= 0 && index < _slots.Length) ? _slots[index] : null;
 
+    public bool IsEquipped(EquipmentResult item)
+    {
+        if (item == null) return false;
+
+        for (int i = 0; i < _slots.Length; i++)
+        {
+            if (ReferenceEquals(_slots[i], item))
+                return true;
+        }
+
+        return false;
+    }
+
     /// <summary>将装备放入对应槽位，替换旧装备并刷新角色属性。</summary>
     public void Equip(EquipmentResult item)
     {
@@ -40,6 +53,13 @@ public class EquipmentSlotSystem : MonoBehaviour
     /// <summary>分解装备，按等级查表给予大树经验。</summary>
     public void Decompose(EquipmentResult item)
     {
+        if (item == null) return;
+        if (IsEquipped(item))
+        {
+            Debug.LogWarning($"[EquipmentSlotSystem] Cannot decompose equipped item: {item.itemName}");
+            return;
+        }
+
         int exp = GetDecomposeExp(item.equipLevel);
         TreeExpManager.Instance?.AddExp(exp);
         Debug.Log($"[EquipmentSlotSystem] 分解：{item.itemName}，获得 {exp} 树经验");

@@ -75,6 +75,7 @@ public class EquipmentCardUI : MonoBehaviour
             TreeClick.Unlock();
             return;
         }
+        decomposeButton?.gameObject.SetActive(true);
         equipButton?.gameObject.SetActive(true);
         _currentItem = data;
         Populate(data);
@@ -94,6 +95,7 @@ public class EquipmentCardUI : MonoBehaviour
             return;
         }
         equipButton?.gameObject.SetActive(false);
+        decomposeButton?.gameObject.SetActive(false);
         _currentItem = data;
         Populate(data);
         ApplyFontToAllText();
