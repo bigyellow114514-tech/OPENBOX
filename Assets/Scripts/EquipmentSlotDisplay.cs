@@ -4,6 +4,7 @@ using UnityEngine;
 /// 挂在场景中每个装备槽位对象上。
 /// backgroundRenderer 是永远可见的背景格，iconRenderer 是叠加其上的装备图标层。
 /// </summary>
+[RequireComponent(typeof(Collider2D))]
 public class EquipmentSlotDisplay : MonoBehaviour
 {
     [SerializeField] int            slotIndex;            // 0-11，与 SlotNames 对应
@@ -11,10 +12,13 @@ public class EquipmentSlotDisplay : MonoBehaviour
     [SerializeField] SpriteRenderer iconRenderer;         // 覆盖在背景上的装备图标层
     [SerializeField] [Range(0.1f, 1f)] float iconFill = 0.85f; // 图标占背景格的比例，Inspector 可调
 
-    Vector2 _slotSpriteSize; // 背景格的 sprite 原始尺寸（不含世界缩放）
+    Vector2    _slotSpriteSize; // 背景格的 sprite 原始尺寸（不含世界缩放）
+    Collider2D _col;
 
     void Start()
     {
+        _col = GetComponent<Collider2D>();
+
         // 只取 sprite 的原始尺寸；iconRenderer 与 backgroundRenderer 共享同一父级，
         // 两者的 lossyScale 相同，计算 localScale 时会自然消掉，无需乘入。
         if (backgroundRenderer != null && backgroundRenderer.sprite != null)
@@ -30,6 +34,21 @@ public class EquipmentSlotDisplay : MonoBehaviour
             EquipmentSlotSystem.Instance.OnSlotChanged += OnSlotChanged;
 
         Refresh();
+    }
+
+    void Update()
+    {
+        if (!Input.GetMouseButtonDown(0) || TreeClick.Locked) return;
+
+        var item = EquipmentSlotSystem.Instance?.GetSlot(slotIndex);
+        if (item == null) return; // 空槽位不响应点击
+
+        Vector2 worldPos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+        if (_col != null && _col.OverlapPoint(worldPos))
+        {
+            TreeClick.Lock();
+            EquipmentCardUI.Instance?.ShowFromSlot(item);
+        }
     }
 
     void OnDestroy()

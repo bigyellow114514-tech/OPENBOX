@@ -75,9 +75,27 @@ public class EquipmentCardUI : MonoBehaviour
             TreeClick.Unlock();
             return;
         }
+        equipButton?.gameObject.SetActive(true);
         _currentItem = data;
         Populate(data);
         // 在所有 StatRow 实例化完成后统一赋字体
+        ApplyFontToAllText();
+        gameObject.SetActive(true);
+        StopAllCoroutines();
+        StartCoroutine(AnimateFade(0f, 1f));
+    }
+
+    // 从装备槽位点击查看：只显示属性，隐藏"装备"按钮（已装备）
+    public void ShowFromSlot(EquipmentResult data)
+    {
+        if (data == null)
+        {
+            TreeClick.Unlock();
+            return;
+        }
+        equipButton?.gameObject.SetActive(false);
+        _currentItem = data;
+        Populate(data);
         ApplyFontToAllText();
         gameObject.SetActive(true);
         StopAllCoroutines();
