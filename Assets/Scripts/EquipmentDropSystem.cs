@@ -32,6 +32,7 @@ public class EquipmentDropSystem : MonoBehaviour
         // 最终属性 = 基础值 × (1 + 品质系数) × (1 + 部位系数)
         return new EquipmentResult
         {
+            slotIndex  = slot,
             itemName   = GetItemName(slot, equipLevel),
             slotName   = SlotNames[slot],
             icon       = GetIcon(equipLevel),

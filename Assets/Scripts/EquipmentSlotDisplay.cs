@@ -1,37 +1,30 @@
 using UnityEngine;
 
 /// <summary>
-/// 挂在场景中每个 Equip_x 槽位对象上。
-/// Inspector 里设定 slotIndex（0=武器 … 11=圣物），运行时自动显示已装备图标并适配大小。
+/// 挂在场景中每个装备槽位对象上。
+/// backgroundRenderer 是永远可见的背景格，iconRenderer 是叠加其上的装备图标层。
 /// </summary>
 public class EquipmentSlotDisplay : MonoBehaviour
 {
-    [SerializeField] int            slotIndex;    // 0-11，与 SlotNames 对应
-    [SerializeField] SpriteRenderer iconRenderer; // 显示装备图标（与 X 标同一个）
-    [SerializeField] Sprite         emptySprite;  // 空槽时显示的 X 图标
+    [SerializeField] int            slotIndex;            // 0-11，与 SlotNames 对应
+    [SerializeField] SpriteRenderer backgroundRenderer;   // 背景格，始终显示，不修改
+    [SerializeField] SpriteRenderer iconRenderer;         // 覆盖在背景上的装备图标层
+    [SerializeField] [Range(0.1f, 1f)] float iconFill = 0.85f; // 图标占背景格的比例，Inspector 可调
 
-    // 记录空槽时的初始缩放和世界尺寸，装备图标以此为目标大小
-    Vector3 _originalScale;
-    Vector2 _slotWorldSize; // 世界空间下槽位的宽高
+    Vector2 _slotSpriteSize; // 背景格的 sprite 原始尺寸（不含世界缩放）
 
     void Start()
     {
-        _originalScale = iconRenderer != null
-            ? iconRenderer.transform.localScale
-            : transform.localScale;
-
-        // 以空槽图标的边界计算槽位世界尺寸
-        var refSprite = emptySprite ?? iconRenderer?.sprite;
-        if (refSprite != null)
-        {
-            _slotWorldSize = new Vector2(
-                refSprite.bounds.size.x * _originalScale.x,
-                refSprite.bounds.size.y * _originalScale.y);
-        }
+        // 只取 sprite 的原始尺寸；iconRenderer 与 backgroundRenderer 共享同一父级，
+        // 两者的 lossyScale 相同，计算 localScale 时会自然消掉，无需乘入。
+        if (backgroundRenderer != null && backgroundRenderer.sprite != null)
+            _slotSpriteSize = backgroundRenderer.sprite.bounds.size;
         else
-        {
-            _slotWorldSize = Vector2.one;
-        }
+            _slotSpriteSize = Vector2.one;
+
+        // 确保图标层居中在背景格上，修正场景中可能存在的 localPosition 偏移
+        if (iconRenderer != null)
+            iconRenderer.transform.localPosition = Vector3.zero;
 
         if (EquipmentSlotSystem.Instance != null)
             EquipmentSlotSystem.Instance.OnSlotChanged += OnSlotChanged;
@@ -58,25 +51,25 @@ public class EquipmentSlotDisplay : MonoBehaviour
         var item = EquipmentSlotSystem.Instance?.GetSlot(slotIndex);
         if (item != null && item.icon != null)
         {
-            iconRenderer.sprite = item.icon;
+            iconRenderer.sprite  = item.icon;
+            iconRenderer.enabled = true;
             FitToSlot(item.icon);
         }
         else
         {
-            iconRenderer.sprite = emptySprite;
-            iconRenderer.transform.localScale = _originalScale; // 还原 X 标大小
+            iconRenderer.sprite  = null;
+            iconRenderer.enabled = false;
         }
     }
 
-    // 等比缩放图标，使其长边与槽位对齐
+    // 等比缩放图标：长边对齐背景格，再乘 iconFill 留出内边距
     void FitToSlot(Sprite icon)
     {
-        Vector2 iconNaturalSize = icon.bounds.size;
-        if (iconNaturalSize.x <= 0 || iconNaturalSize.y <= 0) return;
+        Vector2 iconSize = icon.bounds.size;
+        if (iconSize.x <= 0 || iconSize.y <= 0) return;
 
-        float scaleX = _slotWorldSize.x / iconNaturalSize.x;
-        float scaleY = _slotWorldSize.y / iconNaturalSize.y;
-        float scale  = Mathf.Min(scaleX, scaleY); // 取小值保持比例，不溢出槽位
+        float scale = Mathf.Min(_slotSpriteSize.x / iconSize.x,
+                                 _slotSpriteSize.y / iconSize.y) * iconFill;
 
         iconRenderer.transform.localScale = Vector3.one * scale;
     }

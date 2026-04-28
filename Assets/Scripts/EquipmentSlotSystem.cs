@@ -25,16 +25,16 @@ public class EquipmentSlotSystem : MonoBehaviour
     /// <summary>将装备放入对应槽位，替换旧装备并刷新角色属性。</summary>
     public void Equip(EquipmentResult item)
     {
-        int index = SlotIndex(item.slotName);
-        if (index < 0)
+        int index = item.slotIndex;
+        if (index < 0 || index >= _slots.Length)
         {
-            Debug.LogWarning($"[EquipmentSlotSystem] 未知槽位：{item.slotName}");
+            Debug.LogWarning($"[EquipmentSlotSystem] 槽位越界：{item.slotName}（index={index}）");
             return;
         }
         _slots[index] = item;
         RefreshPlayerAttr();
         OnSlotChanged?.Invoke(index);
-        Debug.Log($"[EquipmentSlotSystem] 装备成功：{item.itemName} → {item.slotName}");
+        Debug.Log($"[EquipmentSlotSystem] 装备成功：{item.itemName} → slot {index}（{item.slotName}）");
     }
 
     /// <summary>分解装备，按等级查表给予大树经验。</summary>
@@ -54,13 +54,6 @@ public class EquipmentSlotSystem : MonoBehaviour
         foreach (var slot in _slots)
             if (slot != null)
                 PlayerCharacter.Instance.AddEquipAttr(slot.bonusAttr);
-    }
-
-    static int SlotIndex(string slotName)
-    {
-        for (int i = 0; i < SlotNames.Length; i++)
-            if (SlotNames[i] == slotName) return i;
-        return -1;
     }
 
     static int GetDecomposeExp(int equipLevel)
