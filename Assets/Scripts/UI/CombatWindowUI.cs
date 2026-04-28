@@ -133,10 +133,18 @@ public class CombatWindowUI : MonoBehaviour
     void ResolveUnitSprites()
     {
         if (playerSprite == null)
-            playerSprite = FindChildSprite("CombatPlayerUnit");
+            playerSprite = FindChildSprite("CombatPlayerUnit")
+                ?? Resources.Load<Sprite>("Sprites/Knight");
 
         if (enemySprite == null)
-            enemySprite = FindChildSprite("CombatEnemyUnit");
+            enemySprite = FindChildSprite("CombatEnemyUnit")
+                ?? Resources.Load<Sprite>("Sprites/Slam");
+
+        if (playerAttackSheet == null)
+            playerAttackSheet = Resources.Load<Sprite>("Sprites/knight_attack");
+
+        if (playerAttackedSheet == null)
+            playerAttackedSheet = Resources.Load<Sprite>("Sprites/knight_attacked");
     }
 
     Sprite FindChildSprite(string childName)
