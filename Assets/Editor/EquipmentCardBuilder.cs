@@ -314,18 +314,22 @@ public static class EquipmentCardBuilder
         closeBtnRect.sizeDelta        = new Vector2(36, 36);
 
         var closeBtnLE = closeBtnGO.AddComponent<LayoutElement>();
-        closeBtnLE.ignoreLayout = true;   // 不参与 VLG 排列
+        closeBtnLE.ignoreLayout = true;
 
         var closeBtnImg = closeBtnGO.AddComponent<Image>();
-        closeBtnImg.sprite           = closeSprite;
-        closeBtnImg.preserveAspect   = true;
-        closeBtnImg.raycastTarget    = true;
+        closeBtnImg.sprite        = closeSprite;
+        closeBtnImg.preserveAspect = true;
+        closeBtnImg.raycastTarget  = true;
 
         var closeBtn = closeBtnGO.AddComponent<Button>();
         var colors   = closeBtn.colors;
         colors.highlightedColor = new Color(1f, 0.75f, 0.55f);
         colors.pressedColor     = new Color(0.75f, 0.35f, 0.15f);
         closeBtn.colors = colors;
+
+        // ── EquipButton & DecomposeButton（卡片底部，浮在 VLG 之外，随卡片 CanvasGroup 淡入淡出）──
+        var equipBtn     = BuildActionButton("EquipButton",     card.transform, -70f, new Color(0.20f, 0.55f, 0.20f), "装备",  font);
+        var decomposeBtn = BuildActionButton("DecomposeButton", card.transform,  70f, new Color(0.75f, 0.35f, 0.10f), "分解",  font);
 
         // ── 连线 EquipmentCardUI 的 SerializedField ──
         var cardSO = new SerializedObject(cardUI);
@@ -336,10 +340,56 @@ public static class EquipmentCardBuilder
         cardSO.FindProperty("statRowPrefab").objectReferenceValue    = statRowPrefab;
         cardSO.FindProperty("descriptionText").objectReferenceValue  = descText;
         cardSO.FindProperty("closeButton").objectReferenceValue      = closeBtn;
+        cardSO.FindProperty("equipButton").objectReferenceValue      = equipBtn;
+        cardSO.FindProperty("decomposeButton").objectReferenceValue  = decomposeBtn;
         cardSO.FindProperty("chineseFontAsset").objectReferenceValue = font;
         cardSO.ApplyModifiedProperties();
 
         return card;
+    }
+
+    // 创建动作按钮（锚定卡片底部，ignoreLayout，随卡片 CanvasGroup 一起淡入淡出）
+    static Button BuildActionButton(string goName, Transform cardRoot, float offsetX,
+                                    Color color, string label, TMP_FontAsset font)
+    {
+        var go = MakeUIGO(goName, cardRoot);
+
+        var le = go.AddComponent<LayoutElement>();
+        le.ignoreLayout = true;
+
+        var rt          = go.GetComponent<RectTransform>();
+        rt.anchorMin    = new Vector2(0.5f, 0f);
+        rt.anchorMax    = new Vector2(0.5f, 0f);
+        rt.pivot        = new Vector2(0.5f, 0.5f);
+        rt.sizeDelta    = new Vector2(120f, 36f);
+        rt.anchoredPosition = new Vector2(offsetX, -24f);  // 卡片底边下方 24 单位
+
+        var img   = go.AddComponent<Image>();
+        img.color = color;
+
+        var btn = go.AddComponent<Button>();
+        btn.targetGraphic = img;
+        var btnColors              = btn.colors;
+        btnColors.highlightedColor = color * 1.15f;
+        btnColors.pressedColor     = color * 0.75f;
+        btn.colors = btnColors;
+
+        var labelGO = MakeUIGO("Label", go.transform);
+        var labelRT        = labelGO.GetComponent<RectTransform>();
+        labelRT.anchorMin  = Vector2.zero;
+        labelRT.anchorMax  = Vector2.one;
+        labelRT.offsetMin  = Vector2.zero;
+        labelRT.offsetMax  = Vector2.zero;
+
+        var tmp       = labelGO.AddComponent<TextMeshProUGUI>();
+        tmp.text      = label;
+        tmp.fontSize  = 16;
+        tmp.fontStyle = FontStyles.Bold;
+        tmp.alignment = TextAlignmentOptions.Center;
+        tmp.color     = Color.white;
+        if (font != null) tmp.font = font;
+
+        return btn;
     }
 
     // ── 工具 ──────────────────────────────────────────────────────────
