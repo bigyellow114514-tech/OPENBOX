@@ -64,6 +64,7 @@ public static class EquipmentCompareBuilder
 
         // ── 标题行：两个标签对齐两张卡片 ─────────────────────────
         var labelRow = MakeUIGO("LabelRow", root.transform);
+        labelRow.GetComponent<RectTransform>().sizeDelta = new Vector2(880, 24);
         labelRow.AddComponent<LayoutElement>().preferredHeight = 24;
 
         var labelHLG = labelRow.AddComponent<HorizontalLayoutGroup>();
@@ -94,6 +95,7 @@ public static class EquipmentCompareBuilder
 
         // ── 按钮行 ────────────────────────────────────────────────
         var btnRow = MakeUIGO("ButtonRow", root.transform);
+        btnRow.GetComponent<RectTransform>().sizeDelta = new Vector2(880, 46);
         btnRow.AddComponent<LayoutElement>().preferredHeight = 46;
 
         var btnHLG = btnRow.AddComponent<HorizontalLayoutGroup>();

@@ -201,15 +201,6 @@ public static class EquipmentCardBuilder
         card.AddComponent<CanvasGroup>();
         var cardUI = card.AddComponent<EquipmentCardUI>();
 
-        // 用 VLG 把 TopRow / BottomPanel 上下排列
-        var rootVLG = card.AddComponent<VerticalLayoutGroup>();
-        rootVLG.padding               = new RectOffset(14, 14, 10, 10);
-        rootVLG.spacing               = 8;
-        rootVLG.childControlWidth     = true;
-        rootVLG.childForceExpandWidth = true;
-        rootVLG.childControlHeight    = false;
-        rootVLG.childForceExpandHeight = false;
-
         // ── TopRow ──
         var topRow    = MakeUIGO("TopRow", card.transform);
         var topRowLE  = topRow.AddComponent<LayoutElement>();
@@ -292,7 +283,7 @@ public static class EquipmentCardBuilder
         statsVLG.spacing               = 2;
         statsVLG.childControlWidth     = true;
         statsVLG.childForceExpandWidth = true;
-        statsVLG.childControlHeight    = false;
+        statsVLG.childControlHeight    = true;
         statsVLG.childForceExpandHeight = false;
         var statsCSF = statsContainer.AddComponent<ContentSizeFitter>();
         statsCSF.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
