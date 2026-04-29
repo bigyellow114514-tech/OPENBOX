@@ -29,7 +29,7 @@ public class EquipmentDropSystem : MonoBehaviour
         var rarCoef  = RarityRatios[Mathf.Clamp(rarityIndex, 0, RarityRatios.Length - 1)];
         var sltCoef  = SlotRatios[Mathf.Clamp(slot, 0, SlotRatios.Length - 1)];
 
-        // 最终属性 = 基础值 × (1 + 品质系数) × (1 + 部位系数)
+        // 最终属性 = 基础值 × 品质系数 × 部位系数
         return new EquipmentResult
         {
             slotIndex  = slot,
@@ -40,10 +40,10 @@ public class EquipmentDropSystem : MonoBehaviour
             equipLevel = equipLevel,
             bonusAttr = new RoleAttr
             {
-                Attack  = Mathf.Round(baseAttr.Attack  * (1f + rarCoef.Attack)  * (1f + sltCoef.Attack)),
-                Defence = Mathf.Round(baseAttr.Defence * (1f + rarCoef.Defence) * (1f + sltCoef.Defence)),
-                Hp      = Mathf.Round(baseAttr.Hp      * (1f + rarCoef.Hp)      * (1f + sltCoef.Hp)),
-                Agility = Mathf.Round(baseAttr.Agility * (1f + rarCoef.Agility) * (1f + sltCoef.Agility)),
+                Attack  = Mathf.Round(baseAttr.Attack  * rarCoef.Attack  * sltCoef.Attack),
+                Defence = Mathf.Round(baseAttr.Defence * rarCoef.Defence * sltCoef.Defence),
+                Hp      = Mathf.Round(baseAttr.Hp      * rarCoef.Hp      * sltCoef.Hp),
+                Agility = Mathf.Round(baseAttr.Agility * rarCoef.Agility * sltCoef.Agility),
             }
         };
     }
