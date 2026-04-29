@@ -6,12 +6,14 @@ using UnityEngine;
 public class StageData
 {
     const string StageXlsxRelativePath = "Excel/Stage.xlsx";
+    const int DefaultMaxRound = 25;
 
     static Dictionary<int, StageData> _stageTable;
     static bool _stageTableLoaded;
 
     public int StageId;
     public string StageName;
+    public string MonsterAvatar;
     public int MaxRound;
     public RoleAttr EnemyAttr;
     public int PetTicketReward;
@@ -35,7 +37,8 @@ public class StageData
         {
             StageId = stageId,
             StageName = "Stage " + stageId,
-            MaxRound = 15,
+            MonsterAvatar = "1001",
+            MaxRound = DefaultMaxRound,
             EnemyAttr = new RoleAttr
             {
                 Hp = 70f + scale * 18f,
@@ -106,7 +109,8 @@ public class StageData
             {
                 StageId = stageId,
                 StageName = "Stage " + stageId,
-                MaxRound = 15,
+                MonsterAvatar = row.Get(columns, "MonsterAvatar"),
+                MaxRound = DefaultMaxRound,
                 EnemyAttr = new RoleAttr
                 {
                     Attack = row.GetFloat(columns, "Attack"),
@@ -132,6 +136,7 @@ public class StageData
         {
             StageId = source.StageId,
             StageName = source.StageName,
+            MonsterAvatar = source.MonsterAvatar,
             MaxRound = source.MaxRound,
             EnemyAttr = source.EnemyAttr,
             PetTicketReward = source.PetTicketReward,

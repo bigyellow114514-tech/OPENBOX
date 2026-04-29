@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections.Generic;
 
 public class CombatWindowUI : MonoBehaviour
 {
@@ -14,11 +15,14 @@ public class CombatWindowUI : MonoBehaviour
 
     StageData _stage;
     CombatResult _result;
+    MonsterAnimationSet _monsterAnimations;
     bool _isOpen;
     bool _showResult;
+    bool _playingEnemyDeath;
     bool _rewardApplied;
     int _eventIndex;
     float _eventStartTime;
+    float _deathStartTime;
 
     Texture2D _panelTex;
     Texture2D _barBgTex;
@@ -28,6 +32,7 @@ public class CombatWindowUI : MonoBehaviour
 
     GUIStyle _titleStyle;
     GUIStyle _labelStyle;
+    GUIStyle _roundStyle;
     GUIStyle _buttonStyle;
     GUIStyle _damageStyle;
     GUIStyle _healStyle;
@@ -37,6 +42,8 @@ public class CombatWindowUI : MonoBehaviour
     const float EventDuration = 0.85f;
     const float AttackReachTime = 0.18f;
     const float AttackReturnTime = 0.42f;
+    const float EnemyIdleFps = 16f;
+    const float EnemyDeathDuration = 0.9f;
 
     public void Open(StageData stage, CombatResult result)
     {
@@ -44,16 +51,26 @@ public class CombatWindowUI : MonoBehaviour
 
         _stage = stage;
         _result = result;
+        _monsterAnimations = MonsterAnimationSet.Load(stage != null ? stage.MonsterAvatar : "");
         _isOpen = true;
         _showResult = result.Logs.Count == 0;
+        _playingEnemyDeath = false;
         _rewardApplied = false;
         _eventIndex = 0;
         _eventStartTime = Time.unscaledTime;
+        _deathStartTime = 0f;
     }
 
     void Update()
     {
         if (!_isOpen || _result == null || _showResult) return;
+
+        if (_playingEnemyDeath)
+        {
+            if (Time.unscaledTime - _deathStartTime >= EnemyDeathDuration)
+                _showResult = true;
+            return;
+        }
 
         if (Time.unscaledTime - _eventStartTime < EventDuration) return;
 
@@ -61,7 +78,17 @@ public class CombatWindowUI : MonoBehaviour
         _eventStartTime = Time.unscaledTime;
 
         if (_eventIndex >= _result.Logs.Count)
-            _showResult = true;
+        {
+            if (_result.PlayerWon && _monsterAnimations != null && _monsterAnimations.HasDeath)
+            {
+                _playingEnemyDeath = true;
+                _deathStartTime = Time.unscaledTime;
+            }
+            else
+            {
+                _showResult = true;
+            }
+        }
     }
 
     void OnGUI()
@@ -78,16 +105,25 @@ public class CombatWindowUI : MonoBehaviour
         GUI.Box(new Rect(x, y, w, h), GUIContent.none);
 
         GUI.Label(new Rect(x + 16f, y + 14f, w - 32f, 30f), _stage.StageName, _titleStyle);
+        GUI.Label(new Rect(x + 16f, y + 40f, w - 32f, 22f), RoundText(), _roundStyle);
 
-        Rect arena = new Rect(x + 28f, y + 58f, w - 56f, h - 142f);
+        Rect arena = new Rect(x + 28f, y + 72f, w - 56f, h - 156f);
         DrawArena(arena);
 
         if (_showResult)
             DrawResult(x + 28f, y + h - 66f, w - 56f);
-        else if (GUI.Button(new Rect(x + w - 126f, y + h - 50f, 98f, 32f), "Skip", _buttonStyle))
+        else if (!_playingEnemyDeath && GUI.Button(new Rect(x + w - 126f, y + h - 50f, 98f, 32f), "Skip", _buttonStyle))
         {
             _eventIndex = _result.Logs.Count;
-            _showResult = true;
+            if (_result.PlayerWon && _monsterAnimations != null && _monsterAnimations.HasDeath)
+            {
+                _playingEnemyDeath = true;
+                _deathStartTime = Time.unscaledTime;
+            }
+            else
+            {
+                _showResult = true;
+            }
         }
     }
 
@@ -115,6 +151,14 @@ public class CombatWindowUI : MonoBehaviour
             fontSize = 14,
             alignment = TextAnchor.MiddleLeft,
             normal = { textColor = Color.white }
+        };
+
+        _roundStyle = new GUIStyle(GUI.skin.label)
+        {
+            fontSize = 14,
+            fontStyle = FontStyle.Bold,
+            alignment = TextAnchor.MiddleCenter,
+            normal = { textColor = new Color(0.9f, 0.9f, 0.9f, 1f) }
         };
 
         _buttonStyle = new GUIStyle(GUI.skin.button)
@@ -184,7 +228,7 @@ public class CombatWindowUI : MonoBehaviour
         DrawHpBlock(new Rect(enemyHome.x, arena.y, enemyHome.width, 48f), "Enemy", enemyHp, _result.EnemyMaxHp, _enemyHpTex);
 
         DrawPlayerCharacter(playerRect, current, progress);
-        DrawCharacter(enemyRect, enemySprite, false);
+        DrawEnemyCharacter(enemyRect, current, progress);
 
         bool playerStunned = current != null ? current.PlayerStunned : LastPlayerStunned();
         bool enemyStunned = current != null ? current.EnemyStunned : LastEnemyStunned();
@@ -252,6 +296,90 @@ public class CombatWindowUI : MonoBehaviour
         }
 
         DrawCharacter(rect, playerSprite, false);
+    }
+
+    void DrawEnemyCharacter(Rect rect, CombatLogEntry current, float progress)
+    {
+        if (_monsterAnimations == null)
+        {
+            DrawCharacter(rect, enemySprite, false);
+            return;
+        }
+
+        if (_playingEnemyDeath)
+        {
+            DrawAnimationFrame(rect, _monsterAnimations.Die, DeathFrame(), false);
+            return;
+        }
+
+        if (current != null && current.Type == CombatEventType.Attack && !current.ActorIsPlayer)
+        {
+            DrawAnimationFrame(rect, _monsterAnimations.Attack, ProgressFrame(_monsterAnimations.Attack, progress), false);
+            return;
+        }
+
+        DrawAnimationFrame(rect, _monsterAnimations.Idle, LoopFrame(_monsterAnimations.Idle, EnemyIdleFps), false);
+    }
+
+    int DeathFrame()
+    {
+        if (_monsterAnimations == null || _monsterAnimations.Die == null || _monsterAnimations.Die.Length == 0)
+            return 0;
+
+        float progress = Mathf.Clamp01((Time.unscaledTime - _deathStartTime) / EnemyDeathDuration);
+        return ProgressFrame(_monsterAnimations.Die, progress);
+    }
+
+    int ProgressFrame(Sprite[] frames, float progress)
+    {
+        int count = frames != null ? frames.Length : 0;
+        if (count <= 1) return 0;
+        return Mathf.Clamp(Mathf.FloorToInt(Mathf.Clamp01(progress) * count), 0, count - 1);
+    }
+
+    int LoopFrame(Sprite[] frames, float fps)
+    {
+        int count = frames != null ? frames.Length : 0;
+        if (count <= 1) return 0;
+        return Mathf.FloorToInt(Time.unscaledTime * Mathf.Max(1f, fps)) % count;
+    }
+
+    void DrawAnimationFrame(Rect rect, Sprite[] frames, int frameIndex, bool flip)
+    {
+        if (frames == null || frames.Length == 0)
+        {
+            DrawCharacter(rect, enemySprite, flip);
+            return;
+        }
+
+        DrawSprite(rect, frames[Mathf.Clamp(frameIndex, 0, frames.Length - 1)], flip);
+    }
+
+    void DrawSprite(Rect rect, Sprite sprite, bool flip)
+    {
+        if (sprite == null || sprite.texture == null)
+        {
+            GUI.Box(rect, GUIContent.none);
+            return;
+        }
+
+        Rect textureRect = sprite.textureRect;
+        Rect uv = new Rect(
+            textureRect.x / sprite.texture.width,
+            textureRect.y / sprite.texture.height,
+            textureRect.width / sprite.texture.width,
+            textureRect.height / sprite.texture.height);
+
+        if (!flip)
+        {
+            GUI.DrawTextureWithTexCoords(rect, sprite.texture, uv, true);
+            return;
+        }
+
+        Matrix4x4 old = GUI.matrix;
+        GUIUtility.ScaleAroundPivot(new Vector2(-1f, 1f), rect.center);
+        GUI.DrawTextureWithTexCoords(rect, sprite.texture, uv, true);
+        GUI.matrix = old;
     }
 
     void DrawSheetFrame(Rect rect, Sprite sheet, int frameIndex, bool flip)
@@ -367,12 +495,34 @@ public class CombatWindowUI : MonoBehaviour
         _isOpen = false;
         _stage = null;
         _result = null;
+        _monsterAnimations = null;
     }
 
     CombatLogEntry CurrentEvent()
     {
         if (_result == null || _eventIndex < 0 || _eventIndex >= _result.Logs.Count) return null;
         return _result.Logs[_eventIndex];
+    }
+
+    string RoundText()
+    {
+        int maxRound = _stage != null ? Mathf.Max(1, _stage.MaxRound) : 1;
+        int round = CurrentRound();
+        return "Round " + round + "/" + maxRound;
+    }
+
+    int CurrentRound()
+    {
+        if (_result == null) return 1;
+
+        if (_showResult || _playingEnemyDeath)
+            return Mathf.Clamp(_result.LastRound, 1, _stage != null ? Mathf.Max(1, _stage.MaxRound) : _result.LastRound);
+
+        CombatLogEntry current = CurrentEvent();
+        if (current != null)
+            return Mathf.Clamp(current.Round, 1, _stage != null ? Mathf.Max(1, _stage.MaxRound) : current.Round);
+
+        return 1;
     }
 
     float CurrentProgress()
@@ -382,6 +532,7 @@ public class CombatWindowUI : MonoBehaviour
 
     float CurrentPlayerHp(float progress)
     {
+        if (_playingEnemyDeath) return _result.PlayerHp;
         if (_showResult) return _result.PlayerHp;
         CombatLogEntry current = CurrentEvent();
         if (current != null && current.Type == CombatEventType.Attack && progress < AttackReachTime)
@@ -391,6 +542,7 @@ public class CombatWindowUI : MonoBehaviour
 
     float CurrentEnemyHp(float progress)
     {
+        if (_playingEnemyDeath) return _result.EnemyHp;
         if (_showResult) return _result.EnemyHp;
         CombatLogEntry current = CurrentEvent();
         if (current != null && current.Type == CombatEventType.Attack && progress < AttackReachTime)
@@ -448,5 +600,74 @@ public class CombatWindowUI : MonoBehaviour
         tex.SetPixel(0, 0, color);
         tex.Apply();
         return tex;
+    }
+
+    sealed class MonsterAnimationSet
+    {
+        const string ResourceRoot = "Sprites/Monster";
+        static readonly Dictionary<string, MonsterAnimationSet> Cache = new Dictionary<string, MonsterAnimationSet>();
+
+        public Sprite[] Idle;
+        public Sprite[] Attack;
+        public Sprite[] Die;
+        public bool HasDeath => Die != null && Die.Length > 0;
+
+        public static MonsterAnimationSet Load(string avatar)
+        {
+            string id = NormalizeAvatarId(avatar);
+            if (string.IsNullOrEmpty(id)) id = "1001";
+
+            if (Cache.TryGetValue(id, out MonsterAnimationSet cached))
+                return cached;
+
+            string folderName = "Monster_Boss_" + id;
+            string path = ResourceRoot + "/" + folderName;
+            Sprite[] allFrames = Resources.LoadAll<Sprite>(path);
+            if (allFrames == null || allFrames.Length == 0)
+            {
+                Debug.LogWarning("[CombatWindowUI] Monster animation frames not found: " + path);
+                Cache[id] = null;
+                return null;
+            }
+
+            var set = new MonsterAnimationSet
+            {
+                Idle = FilterFrames(allFrames, folderName + "-Idle_"),
+                Attack = FilterFrames(allFrames, folderName + "-Attack_"),
+                Die = FilterFrames(allFrames, folderName + "-Die_"),
+            };
+
+            Cache[id] = set;
+            return set;
+        }
+
+        static Sprite[] FilterFrames(Sprite[] frames, string prefix)
+        {
+            var list = new List<Sprite>();
+            for (int i = 0; i < frames.Length; i++)
+            {
+                Sprite sprite = frames[i];
+                if (sprite != null && sprite.name.StartsWith(prefix, System.StringComparison.OrdinalIgnoreCase))
+                    list.Add(sprite);
+            }
+
+            list.Sort((a, b) => string.CompareOrdinal(a.name, b.name));
+            return list.ToArray();
+        }
+
+        static string NormalizeAvatarId(string avatar)
+        {
+            if (string.IsNullOrWhiteSpace(avatar)) return "";
+
+            string digits = "";
+            for (int i = 0; i < avatar.Length; i++)
+            {
+                if (char.IsDigit(avatar[i]))
+                    digits += avatar[i];
+            }
+
+            if (digits.Length <= 4) return digits;
+            return digits.Substring(digits.Length - 4);
+        }
     }
 }
