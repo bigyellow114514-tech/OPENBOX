@@ -15,6 +15,7 @@ public class StatRowUI : MonoBehaviour
     public void Set(string label, float value, string fmt = "0", string suffix = "",
                     Sprite icon = null)
     {
+        labelText.margin = Vector4.zero;
         labelText.text = label;
 
         string prefix  = value > 0f ? "+" : "";

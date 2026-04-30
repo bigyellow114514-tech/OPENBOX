@@ -100,9 +100,10 @@ public class EquipmentCardUI : MonoBehaviour
         equipButton?.gameObject.SetActive(true);
         closeButton?.gameObject.SetActive(false);
         _currentItem = data;
+        _canvasGroup.alpha = 0;
+        gameObject.SetActive(true);
         Populate(data);
         ApplyFontToAllText();
-        gameObject.SetActive(true);
         StopAllCoroutines();
         StartCoroutine(AnimateFade(0f, 1f));
     }
@@ -120,9 +121,10 @@ public class EquipmentCardUI : MonoBehaviour
         decomposeButton?.gameObject.SetActive(false);
         closeButton?.gameObject.SetActive(true);
         _currentItem = data;
+        _canvasGroup.alpha = 0;
+        gameObject.SetActive(true);
         Populate(data);
         ApplyFontToAllText();
-        gameObject.SetActive(true);
         StopAllCoroutines();
         StartCoroutine(AnimateFade(0f, 1f));
     }
