@@ -1,40 +1,36 @@
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
-using TMPro;
 
-/// <summary>
-/// 装备对比窗口：槽位已有装备时，弹出此窗口与新装备并排比较。
-/// 需要执行 OpenBox → UI 构建 → 构建装备对比窗口，在场景中创建 UI 节点后才生效。
-/// </summary>
 public class EquipmentCompareUI : MonoBehaviour
 {
     public static EquipmentCompareUI Instance { get; private set; }
 
-    [Header("当前装备（左侧）")]
-    [SerializeField] Image       oldIconImage;
-    [SerializeField] TMP_Text    oldNameText;
-    [SerializeField] TMP_Text    oldSlotText;
-    [SerializeField] TMP_Text    oldDescText;
-    [SerializeField] Transform   oldStatsContainer;
+    [Header("当前装备")]
+    [SerializeField] Image oldIconImage;
+    [SerializeField] TMP_Text oldNameText;
+    [SerializeField] TMP_Text oldSlotText;
+    [SerializeField] TMP_Text oldDescText;
+    [SerializeField] Transform oldStatsContainer;
 
-    [Header("新装备（右侧）")]
-    [SerializeField] Image       newIconImage;
-    [SerializeField] TMP_Text    newNameText;
-    [SerializeField] TMP_Text    newSlotText;
-    [SerializeField] TMP_Text    newDescText;
-    [SerializeField] Transform   newStatsContainer;
+    [Header("新装备")]
+    [SerializeField] Image newIconImage;
+    [SerializeField] TMP_Text newNameText;
+    [SerializeField] TMP_Text newSlotText;
+    [SerializeField] TMP_Text newDescText;
+    [SerializeField] Transform newStatsContainer;
 
     [Header("按钮")]
-    [SerializeField] Button      replaceButton;    // 替换：装备新装备
-    [SerializeField] Button      decomposeButton;  // 分解：分解新装备获取经验
-    [SerializeField] Button      closeButton;      // 关闭：保留原装备，丢弃新装备
+    [SerializeField] Button replaceButton;
+    [SerializeField] Button decomposeButton;
+    [SerializeField] Button closeButton;
 
     [Header("共用")]
-    [SerializeField] GameObject  statRowPrefab;
+    [SerializeField] GameObject statRowPrefab;
     [SerializeField] TMP_FontAsset chineseFontAsset;
-    [SerializeField] float       animDuration = 0.25f;
+    [SerializeField] float animDuration = 0.25f;
 
-    CanvasGroup     _cg;
+    CanvasGroup _cg;
     EquipmentResult _newItem;
     EquipmentResult _oldItem;
 
@@ -50,8 +46,6 @@ public class EquipmentCompareUI : MonoBehaviour
         closeButton?.onClick.AddListener(OnClose);
         gameObject.SetActive(false);
     }
-
-    // ── 公共接口 ─────────────────────────────────────────────────
 
     public void Show(EquipmentResult newItem, EquipmentResult oldItem)
     {
@@ -75,7 +69,78 @@ public class EquipmentCompareUI : MonoBehaviour
         }));
     }
 
-    // ── 按钮回调 ──────────────────────────────────────────────────
+    void PopulateOld(EquipmentResult old)
+    {
+        oldIconImage.sprite = old.icon;
+        oldIconImage.enabled = old.icon != null;
+        oldNameText.text = old.itemName;
+        oldSlotText.text = "槽位：" + old.slotName;
+        if (oldDescText != null)
+        {
+            oldDescText.gameObject.SetActive(true);
+            oldDescText.text = RarityStars(old.rarity);
+        }
+        BuildStatRows(oldStatsContainer, old.bonusAttr, null);
+    }
+
+    void PopulateNew(EquipmentResult newItem, EquipmentResult oldItem)
+    {
+        newIconImage.sprite = newItem.icon;
+        newIconImage.enabled = newItem.icon != null;
+        newNameText.text = newItem.itemName;
+        newSlotText.text = "槽位：" + newItem.slotName;
+        if (newDescText != null)
+        {
+            newDescText.gameObject.SetActive(true);
+            newDescText.text = RarityStars(newItem.rarity);
+        }
+
+        RoleAttr delta = newItem.bonusAttr - oldItem.bonusAttr;
+        BuildStatRows(newStatsContainer, newItem.bonusAttr, delta);
+    }
+
+    void BuildStatRows(Transform container, RoleAttr attr, RoleAttr? delta)
+    {
+        foreach (Transform child in container)
+            Destroy(child.gameObject);
+
+        AddRow(container, "攻击力", attr.Attack, delta?.Attack, "0");
+        AddRow(container, "生命值", attr.Hp, delta?.Hp, "0");
+        AddRow(container, "防御力", attr.Defence, delta?.Defence, "0");
+        AddRow(container, "敏捷", attr.Agility, delta?.Agility, "0");
+        AddExtraRows(container, attr, delta);
+    }
+
+    void AddExtraRows(Transform container, RoleAttr attr, RoleAttr? delta)
+    {
+        TryAddFirstExtra(container, attr, delta, BattleEntries);
+        TryAddFirstExtra(container, attr, delta, AntiBattleEntries);
+    }
+
+    bool TryAddFirstExtra(Transform container, RoleAttr attr, RoleAttr? delta, StatEntry[] entries)
+    {
+        foreach (var entry in entries)
+        {
+            float value = entry.Getter(attr);
+            float? diff = delta.HasValue ? entry.Getter(delta.Value) : null;
+            if (Mathf.Abs(value) <= 0.001f && (!diff.HasValue || Mathf.Abs(diff.Value) <= 0.001f))
+                continue;
+
+            AddRow(container, entry.Label, value, diff, "0.#", "%");
+            return true;
+        }
+        return false;
+    }
+
+    void AddRow(Transform container, string label, float value, float? delta, string fmt, string suffix = "")
+    {
+        var row = Instantiate(statRowPrefab, container);
+        var ui = row.GetComponent<StatRowUI>();
+        if (delta.HasValue && Mathf.Abs(delta.Value) > 0.001f)
+            ui.SetWithDelta(label, value, delta.Value, fmt, suffix);
+        else
+            ui.Set(label, value, fmt, suffix);
+    }
 
     void OnReplace()
     {
@@ -93,80 +158,6 @@ public class EquipmentCompareUI : MonoBehaviour
 
     void OnClose() => Hide();
 
-    // ── 填充数据 ──────────────────────────────────────────────────
-
-    void PopulateOld(EquipmentResult old)
-    {
-        oldIconImage.sprite  = old.icon;
-        oldIconImage.enabled = old.icon != null;
-        oldNameText.text     = old.itemName;
-        oldSlotText.text     = "槽位：" + old.slotName;
-        oldDescText.text     = RarityStars(old.rarity);
-        BuildStatRows(oldStatsContainer, old.bonusAttr, null);
-    }
-
-    void PopulateNew(EquipmentResult newItem, EquipmentResult oldItem)
-    {
-        newIconImage.sprite  = newItem.icon;
-        newIconImage.enabled = newItem.icon != null;
-        newNameText.text     = newItem.itemName;
-        newSlotText.text     = "槽位：" + newItem.slotName;
-        newDescText.text     = RarityStars(newItem.rarity);
-        RoleAttr delta       = newItem.bonusAttr - oldItem.bonusAttr;
-        BuildStatRows(newStatsContainer, newItem.bonusAttr, delta);
-    }
-
-    void BuildStatRows(Transform container, RoleAttr attr, RoleAttr? delta)
-    {
-        foreach (Transform child in container) Destroy(child.gameObject);
-
-        TryAddRow(container, "攻击力", attr.Attack, delta?.Attack, "0");
-        TryAddRow(container, "防御力", attr.Defence, delta?.Defence, "0");
-        TryAddRow(container, "生命值", attr.Hp, delta?.Hp, "0");
-        TryAddRow(container, "敏捷", attr.Agility, delta?.Agility, "0");
-        TryAddRow(container, "暴击", attr.CritRate, delta?.CritRate, "0.##", "%");
-        TryAddRow(container, "反击", attr.CounterRate, delta?.CounterRate, "0.##", "%");
-        TryAddRow(container, "连击", attr.ComboRate, delta?.ComboRate, "0.##", "%");
-        TryAddRow(container, "闪避", attr.DodgeRate, delta?.DodgeRate, "0.##", "%");
-        TryAddRow(container, "击晕", attr.StunRate, delta?.StunRate, "0.##", "%");
-        TryAddRow(container, "吸血", attr.LifeStealRate, delta?.LifeStealRate, "0.##", "%");
-        TryAddRow(container, "抗暴击", attr.AntiCritRate, delta?.AntiCritRate, "0.##", "%");
-        TryAddRow(container, "抗反击", attr.AntiCounterRate, delta?.AntiCounterRate, "0.##", "%");
-        TryAddRow(container, "抗连击", attr.AntiComboRate, delta?.AntiComboRate, "0.##", "%");
-        TryAddRow(container, "抗闪避", attr.AntiDodgeRate, delta?.AntiDodgeRate, "0.##", "%");
-        TryAddRow(container, "抗击晕", attr.AntiStunRate, delta?.AntiStunRate, "0.##", "%");
-        TryAddRow(container, "抗吸血", attr.AntiLifeStealRate, delta?.AntiLifeStealRate, "0.##", "%");
-        TryAddRow(container, "强化爆伤", attr.CritDmg, delta?.CritDmg, "0.##", "%");
-        TryAddRow(container, "弱化爆伤", attr.AntiCritDmg, delta?.AntiCritDmg, "0.##", "%");
-        TryAddRow(container, "最终增伤", attr.DamageIncrease, delta?.DamageIncrease, "0.##", "%");
-        TryAddRow(container, "最终减伤", attr.DamageDecrease, delta?.DamageDecrease, "0.##", "%");
-        TryAddRow(container, "强化治疗", attr.Healing, delta?.Healing, "0.##", "%");
-        TryAddRow(container, "弱化治疗", attr.AntiHealing, delta?.AntiHealing, "0.##", "%");
-        TryAddRow(container, "强化宠物", attr.PetIncrease, delta?.PetIncrease, "0.##", "%");
-        TryAddRow(container, "弱化宠物", attr.PetDecrease, delta?.PetDecrease, "0.##", "%");
-    }
-
-    void TryAddRow(Transform container, string label, float value, float? delta,
-                   string fmt, string suffix = "")
-    {
-        bool hasValue = Mathf.Abs(value) > 0.001f;
-        bool hasDelta = delta.HasValue && Mathf.Abs(delta.Value) > 0.001f;
-        if (!hasValue && !hasDelta) return;
-
-        var row = Instantiate(statRowPrefab, container);
-        var ui  = row.GetComponent<StatRowUI>();
-        if (hasDelta)
-            ui.SetWithDelta(label, value, delta.Value, fmt, suffix);
-        else
-            ui.Set(label, value, fmt, suffix);
-    }
-
-    static string RarityStars(int rarity)
-    {
-        int r = Mathf.Clamp(rarity, 1, 6);
-        return new string('★', r) + new string('☆', 6 - r);
-    }
-
     void ApplyFontToAllText()
     {
         TMP_FontAsset font = chineseFontAsset != null ? chineseFontAsset : _runtimeFont;
@@ -175,6 +166,7 @@ public class EquipmentCompareUI : MonoBehaviour
             EnsureRuntimeFont();
             font = _runtimeFont;
         }
+
         if (font == null) return;
         foreach (var tmp in GetComponentsInChildren<TMP_Text>(true))
             tmp.font = font;
@@ -183,14 +175,65 @@ public class EquipmentCompareUI : MonoBehaviour
     static void EnsureRuntimeFont()
     {
         if (_runtimeFont != null) return;
-        string[] candidates = { "Microsoft YaHei", "微软雅黑", "SimHei", "黑体", "NSimSun", "Heiti SC", "STHeiti" };
+
+        string[] candidates = { "Microsoft YaHei", "SimHei", "NSimSun", "Heiti SC", "STHeiti" };
         Font osFont = Font.CreateDynamicFontFromOSFont(candidates, 32);
         if (osFont == null) return;
         _runtimeFont = TMP_FontAsset.CreateFontAsset(osFont);
     }
 
-    System.Collections.IEnumerator AnimateFade(float from, float to,
-                                               System.Action onDone = null)
+    static string RarityName(int rarity)
+    {
+        switch (Mathf.Clamp(rarity, 1, 6))
+        {
+            case 1: return "下品";
+            case 2: return "中品";
+            case 3: return "上品";
+            case 4: return "极品";
+            case 5: return "绝品";
+            default: return "神品";
+        }
+    }
+
+    static string RarityStars(int rarity)
+    {
+        int r = Mathf.Clamp(rarity, 1, 6);
+        return new string('★', r) + new string('☆', 6 - r);
+    }
+
+    readonly struct StatEntry
+    {
+        public readonly string Label;
+        public readonly System.Func<RoleAttr, float> Getter;
+
+        public StatEntry(string label, System.Func<RoleAttr, float> getter)
+        {
+            Label = label;
+            Getter = getter;
+        }
+    }
+
+    static readonly StatEntry[] BattleEntries =
+    {
+        new StatEntry("暴击", a => a.CritRate),
+        new StatEntry("反击", a => a.CounterRate),
+        new StatEntry("连击", a => a.ComboRate),
+        new StatEntry("闪避", a => a.DodgeRate),
+        new StatEntry("击晕", a => a.StunRate),
+        new StatEntry("吸血", a => a.LifeStealRate),
+    };
+
+    static readonly StatEntry[] AntiBattleEntries =
+    {
+        new StatEntry("抗暴击", a => a.AntiCritRate),
+        new StatEntry("抗反击", a => a.AntiCounterRate),
+        new StatEntry("抗连击", a => a.AntiComboRate),
+        new StatEntry("抗闪避", a => a.AntiDodgeRate),
+        new StatEntry("抗击晕", a => a.AntiStunRate),
+        new StatEntry("抗吸血", a => a.AntiLifeStealRate),
+    };
+
+    System.Collections.IEnumerator AnimateFade(float from, float to, System.Action onDone = null)
     {
         float elapsed = 0f;
         _cg.alpha = from;
@@ -200,6 +243,7 @@ public class EquipmentCompareUI : MonoBehaviour
             _cg.alpha = Mathf.Lerp(from, to, elapsed / animDuration);
             yield return null;
         }
+
         _cg.alpha = to;
         onDone?.Invoke();
     }

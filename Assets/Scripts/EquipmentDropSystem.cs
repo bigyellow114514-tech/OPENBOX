@@ -1,58 +1,234 @@
+using System.Collections.Generic;
+using System.IO;
 using UnityEngine;
 
 public class EquipmentDropSystem : MonoBehaviour
 {
     public static EquipmentDropSystem Instance { get; private set; }
 
-    [SerializeField] Sprite[] itemIcons;     // Equip1001 ~ Equip1008，由 Builder 自动注入
-    // 装备名称表：[slot * NumBands + band]，由 EquipmentNameBuilder 从 EuipmentIcon.xlsx 写入
+    [SerializeField] Sprite[] itemIcons;
     [SerializeField] string[] itemNameTable;
+
+    const int NumBands = 8;
+    static readonly int[] LevelLimits = { 9, 19, 29, 39, 49, 59, 69, 79 };
+
+    static readonly string[] BattleAttrKeys =
+    {
+        "CritRate", "CounterRate", "ComboRate", "DodgeRate", "StunRate", "LifeStealRate"
+    };
+
+    static readonly string[] AntiBattleAttrKeys =
+    {
+        "AntiCritRate", "AntiCounterRate", "AntiComboRate", "AntiDodgeRate", "AntiStunRate", "AntiLifeStealRate"
+    };
+
+    readonly List<RoleAttr> _levelAttrs = new();
+    readonly List<RoleAttr> _rarityRatios = new();
+    readonly List<RoleAttr> _slotRatios = new();
+    readonly Dictionary<string, float> _globalConfig = new();
+
+    int _battleAttrLevelLimit = 10;
+    int _battleAttrRareLimit = 2;
+    int _antiBattleAttrLevelLimit = 15;
+    int _antiBattleAttrRareLimit = 3;
+    float _attrRandomRange = 0.2f;
+    bool _tablesLoaded;
+
+    static readonly string[] SlotNames =
+    {
+        "武器", "副手", "头盔", "胸甲", "腿甲", "鞋子",
+        "护手", "腰带", "项链", "主戒", "副戒", "圣物"
+    };
 
     void Awake()
     {
         if (Instance != null) { Destroy(gameObject); return; }
         Instance = this;
+        LoadTables();
     }
-
-    // ── 公共接口 ──────────────────────────────────────────────────────
 
     public EquipmentResult GenerateDrop(int rarityIndex, int playerLevel)
     {
-        // 步骤2：随机部位 (0-based)
+        LoadTables();
+
         int slot = Random.Range(0, SlotNames.Length);
+        int maxLevel = Mathf.Max(1, _levelAttrs.Count);
+        int equipLevel = Mathf.Clamp(playerLevel + Random.Range(-3, 4), 1, maxLevel);
+        int rarity = Mathf.Clamp(rarityIndex + 1, 1, Mathf.Max(1, _rarityRatios.Count));
 
-        // 步骤3：装备等级 = playerLevel ± 3，夹在 [1, MaxLevel]
-        int equipLevel = Mathf.Clamp(playerLevel + Random.Range(-3, 4), 1, BaseStats.Length);
+        RoleAttr baseAttr = GetLevelAttr(equipLevel);
+        RoleAttr rarityRatio = GetRatio(_rarityRatios, rarity - 1);
+        RoleAttr slotRatio = GetRatio(_slotRatios, slot);
 
-        // 步骤4：查表
-        var baseAttr = GetBaseAttr(equipLevel);
-        var rarCoef  = RarityRatios[Mathf.Clamp(rarityIndex, 0, RarityRatios.Length - 1)];
-        var sltCoef  = SlotRatios[Mathf.Clamp(slot, 0, SlotRatios.Length - 1)];
+        RoleAttr bonusAttr = new RoleAttr
+        {
+            Attack = Mathf.Round(baseAttr.Attack * rarityRatio.Attack * slotRatio.Attack),
+            Defence = Mathf.Round(baseAttr.Defence * rarityRatio.Defence * slotRatio.Defence),
+            Hp = Mathf.Round(baseAttr.Hp * rarityRatio.Hp * slotRatio.Hp),
+            Agility = Mathf.Round(baseAttr.Agility * rarityRatio.Agility * slotRatio.Agility),
+        };
 
-        // 最终属性 = 基础值 × 品质系数 × 部位系数
+        if (equipLevel > _battleAttrLevelLimit && rarity > _battleAttrRareLimit)
+            AddRandomExtraAttr(ref bonusAttr, baseAttr, rarityRatio, slotRatio, BattleAttrKeys);
+
+        if (equipLevel > _antiBattleAttrLevelLimit && rarity > _antiBattleAttrRareLimit)
+            AddRandomExtraAttr(ref bonusAttr, baseAttr, rarityRatio, slotRatio, AntiBattleAttrKeys);
+
         return new EquipmentResult
         {
-            slotIndex  = slot,
-            itemName   = GetItemName(slot, equipLevel),
-            slotName   = SlotNames[slot],
-            icon       = GetIcon(equipLevel),
-            rarity     = rarityIndex + 1,
+            slotIndex = slot,
+            itemName = GetItemName(slot, equipLevel),
+            slotName = SlotNames[slot],
+            icon = GetIcon(equipLevel),
+            rarity = rarity,
             equipLevel = equipLevel,
-            bonusAttr = new RoleAttr
-            {
-                Attack  = Mathf.Round(baseAttr.Attack  * rarCoef.Attack  * sltCoef.Attack),
-                Defence = Mathf.Round(baseAttr.Defence * rarCoef.Defence * sltCoef.Defence),
-                Hp      = Mathf.Round(baseAttr.Hp      * rarCoef.Hp      * sltCoef.Hp),
-                Agility = Mathf.Round(baseAttr.Agility * rarCoef.Agility * sltCoef.Agility),
-            }
+            bonusAttr = bonusAttr
         };
     }
 
-    // ── 图标 & 名称（EuipmentIcon.xlsx）────────────────────────────────
-
-    static readonly int[] LevelLimits = { 9, 19, 29, 39, 49, 59, 69, 79 };
-
     public Sprite GetIconForLevel(int level) => GetIcon(level);
+
+    void AddRandomExtraAttr(ref RoleAttr attr, RoleAttr baseAttr, RoleAttr rarityRatio, RoleAttr slotRatio, string[] keys)
+    {
+        if (keys == null || keys.Length == 0) return;
+
+        string key = keys[Random.Range(0, keys.Length)];
+        float randomFactor = Random.Range(1f - _attrRandomRange, 1f + _attrRandomRange);
+        float value = GetAttrValue(baseAttr, key) * randomFactor * GetAttrValue(rarityRatio, key) * GetAttrValue(slotRatio, key);
+        attr.SetByKey(key, Mathf.Round(value * 10f) / 10f);
+    }
+
+    void LoadTables()
+    {
+        if (_tablesLoaded) return;
+        _tablesLoaded = true;
+
+        _levelAttrs.Clear();
+        _rarityRatios.Clear();
+        _slotRatios.Clear();
+        _globalConfig.Clear();
+
+        LoadAttrRows(Path.Combine(Application.dataPath, "Excel/Equipment.xlsx"), "Level", _levelAttrs);
+        LoadAttrRows(Path.Combine(Application.dataPath, "Excel/EquipmentRarityRatio.xlsx"), "Rarity", _rarityRatios);
+        LoadAttrRows(Path.Combine(Application.dataPath, "Excel/EquipmentSlotRatio.xlsx"), "Slot", _slotRatios);
+        LoadGlobalConfig(Path.Combine(Application.dataPath, "Excel/GlobalConfig.xlsx"));
+
+        _battleAttrLevelLimit = Mathf.RoundToInt(GetConfig("BattleAttrLevelLimit", _battleAttrLevelLimit));
+        _battleAttrRareLimit = Mathf.RoundToInt(GetConfig("BattleAttrRareLimit", _battleAttrRareLimit));
+        _antiBattleAttrLevelLimit = Mathf.RoundToInt(GetConfig("AntiBattleAttrLevelLimit", _antiBattleAttrLevelLimit));
+        _antiBattleAttrRareLimit = Mathf.RoundToInt(GetConfig("AntiBattleAttrRareLimit", _antiBattleAttrRareLimit));
+        _attrRandomRange = Mathf.Max(0f, GetConfig("EuipmentAttrRandomRange", _attrRandomRange));
+    }
+
+    static void LoadAttrRows(string path, string idColumn, List<RoleAttr> target)
+    {
+        if (!File.Exists(path))
+        {
+            Debug.LogWarning($"[EquipmentDropSystem] 找不到表格：{path}");
+            return;
+        }
+
+        var table = ExcelTable.Load(path);
+        var columns = table.ReadHeader(2);
+        for (int i = 3; i < table.Rows.Count; i++)
+        {
+            ExcelRow row = table.Rows[i];
+            if (row.GetInt(columns, idColumn, -1) < 0) continue;
+            target.Add(ReadAttr(row, columns));
+        }
+    }
+
+    void LoadGlobalConfig(string path)
+    {
+        if (!File.Exists(path))
+        {
+            Debug.LogWarning($"[EquipmentDropSystem] 找不到表格：{path}");
+            return;
+        }
+
+        var table = ExcelTable.Load(path);
+        var columns = table.ReadHeader(2);
+        for (int i = 3; i < table.Rows.Count; i++)
+        {
+            ExcelRow row = table.Rows[i];
+            string key = row.Get(columns, "ParamName");
+            if (string.IsNullOrWhiteSpace(key)) continue;
+            _globalConfig[key.Trim()] = row.GetFloat(columns, "Value");
+        }
+    }
+
+    float GetConfig(string key, float defaultValue)
+    {
+        return _globalConfig.TryGetValue(key, out float value) ? value : defaultValue;
+    }
+
+    RoleAttr GetLevelAttr(int level)
+    {
+        if (_levelAttrs.Count == 0)
+            return new RoleAttr { Attack = 100, Defence = 20, Hp = 1000, Agility = 10 };
+
+        return _levelAttrs[Mathf.Clamp(level - 1, 0, _levelAttrs.Count - 1)];
+    }
+
+    static RoleAttr GetRatio(List<RoleAttr> ratios, int index)
+    {
+        if (ratios.Count == 0)
+            return new RoleAttr
+            {
+                Attack = 1f, Defence = 1f, Hp = 1f, Agility = 1f,
+                CritRate = 1f, CounterRate = 1f, ComboRate = 1f, DodgeRate = 1f, StunRate = 1f, LifeStealRate = 1f,
+                AntiCritRate = 1f, AntiCounterRate = 1f, AntiComboRate = 1f, AntiDodgeRate = 1f, AntiStunRate = 1f, AntiLifeStealRate = 1f,
+            };
+
+        return ratios[Mathf.Clamp(index, 0, ratios.Count - 1)];
+    }
+
+    static RoleAttr ReadAttr(ExcelRow row, Dictionary<string, int> columns)
+    {
+        return new RoleAttr
+        {
+            Attack = row.GetFloat(columns, "Attack"),
+            Defence = row.GetFloat(columns, "Defence"),
+            Hp = row.GetFloat(columns, "Hp"),
+            Agility = row.GetFloat(columns, "Agility"),
+            CritRate = row.GetFloat(columns, "CritRate"),
+            CounterRate = row.GetFloat(columns, "CounterRate"),
+            ComboRate = row.GetFloat(columns, "ComboRate"),
+            DodgeRate = row.GetFloat(columns, "DodgeRate"),
+            StunRate = row.GetFloat(columns, "StunRate"),
+            LifeStealRate = row.GetFloat(columns, "LifeStealRate"),
+            AntiCritRate = row.GetFloat(columns, "AntiCritRate"),
+            AntiCounterRate = row.GetFloat(columns, "AntiCounterRate"),
+            AntiComboRate = row.GetFloat(columns, "AntiComboRate"),
+            AntiDodgeRate = row.GetFloat(columns, "AntiDodgeRate"),
+            AntiStunRate = row.GetFloat(columns, "AntiStunRate"),
+            AntiLifeStealRate = row.GetFloat(columns, "AntiLifeStealRate"),
+        };
+    }
+
+    static float GetAttrValue(RoleAttr attr, string key)
+    {
+        switch (key)
+        {
+            case "Attack": return attr.Attack;
+            case "Defence": return attr.Defence;
+            case "Hp": return attr.Hp;
+            case "Agility": return attr.Agility;
+            case "CritRate": return attr.CritRate;
+            case "CounterRate": return attr.CounterRate;
+            case "ComboRate": return attr.ComboRate;
+            case "DodgeRate": return attr.DodgeRate;
+            case "StunRate": return attr.StunRate;
+            case "LifeStealRate": return attr.LifeStealRate;
+            case "AntiCritRate": return attr.AntiCritRate;
+            case "AntiCounterRate": return attr.AntiCounterRate;
+            case "AntiComboRate": return attr.AntiComboRate;
+            case "AntiDodgeRate": return attr.AntiDodgeRate;
+            case "AntiStunRate": return attr.AntiStunRate;
+            case "AntiLifeStealRate": return attr.AntiLifeStealRate;
+            default: return 0f;
+        }
+    }
 
     Sprite GetIcon(int playerLevel)
     {
@@ -61,18 +237,17 @@ public class EquipmentDropSystem : MonoBehaviour
         return itemIcons[Mathf.Clamp(idx, 0, itemIcons.Length - 1)];
     }
 
-    const int NumBands = 8;
-
     string GetItemName(int slot, int playerLevel)
     {
-        int band  = GetLevelBand(playerLevel);
+        int band = GetLevelBand(playerLevel);
         int index = slot * NumBands + band;
         if (itemNameTable != null && index < itemNameTable.Length)
         {
             string name = itemNameTable[index];
             if (!string.IsNullOrEmpty(name)) return name;
         }
-        return SlotNames[slot]; // 表格未填充时回退到槽位名
+
+        return SlotNames[Mathf.Clamp(slot, 0, SlotNames.Length - 1)];
     }
 
     static int GetLevelBand(int playerLevel)
@@ -81,92 +256,4 @@ public class EquipmentDropSystem : MonoBehaviour
             if (playerLevel <= LevelLimits[i]) return i;
         return LevelLimits.Length - 1;
     }
-
-    // ── 槽位名称 ──────────────────────────────────────────────────────
-
-    static readonly string[] SlotNames =
-    {
-        "武器", "副手", "头盔", "胸甲", "腿甲", "靴子",
-        "护手", "腰带", "项链", "主戒", "副戒", "圣物"
-    };
-
-    // ── Equipment.xlsx — 基础属性（1-36 级）────────────────────────────
-
-    static RoleAttr GetBaseAttr(int level)
-    {
-        int idx = Mathf.Clamp(level, 1, BaseStats.Length) - 1;
-        var b   = BaseStats[idx];
-        return new RoleAttr { Attack = b.a, Defence = b.d, Hp = b.h, Agility = b.g };
-    }
-
-    static readonly (float a, float d, float h, float g)[] BaseStats =
-    {
-        // Lv  Atk   Def    Hp   Agi
-        (100,  20,  1000,  10), // 1
-        (100,  20,  1000,  10), // 2
-        (100,  20,  1000,  10), // 3
-        (100,  20,  1000,  10), // 4
-        (100,  20,  1000,  10), // 5
-        (100,  20,  1000,  10), // 6
-        (100,  20,  1000,  10), // 7
-        (100,  20,  1000,  10), // 8
-        (100,  20,  1000,  10), // 9
-        (100,  20,  1000,  10), // 10
-        (100,  20,  1000,  10), // 11
-        (100,  20,  1000,  10), // 12
-        (140,  35,  1350,  15), // 13
-        (140,  35,  1700,  20), // 14
-        (140,  35,  2050,  25), // 15
-        (140,  35,  2400,  30), // 16
-        (140,  35,  2750,  35), // 17
-        (140,  35,  3100,  40), // 18
-        (140,  35,  3450,  45), // 19
-        (140,  35,  3800,  50), // 20
-        (140,  35,  4150,  55), // 21
-        (140,  35,  4500,  60), // 22
-        (140,  35,  4850,  65), // 23
-        (140,  35,  5200,  70), // 24
-        (180,  50,  5550,  75), // 25
-        (180,  50,  5900,  80), // 26
-        (180,  50,  6250,  85), // 27
-        (180,  50,  6600,  90), // 28
-        (180,  50,  6950,  95), // 29
-        (180,  50,  7300, 100), // 30
-        (180,  50,  7650, 105), // 31
-        (180,  50,  8000, 110), // 32
-        (180,  50,  8350, 115), // 33
-        (180,  50,  8700, 120), // 34
-        (180,  50,  9050, 125), // 35
-        (180,  50,  9400, 130), // 36
-    };
-
-    // ── EquipmentRarityRatio.xlsx ─────────────────────────────────────
-
-    static readonly (float Attack, float Defence, float Hp, float Agility)[] RarityRatios =
-    {
-        (1.0f, 1.0f, 1.0f, 1.0f), // Rarity 1
-        (1.2f, 1.2f, 1.2f, 1.2f), // Rarity 2
-        (1.4f, 1.4f, 1.4f, 1.4f), // Rarity 3
-        (1.6f, 1.6f, 1.6f, 1.6f), // Rarity 4
-        (1.8f, 1.8f, 1.8f, 1.8f), // Rarity 5
-        (2.0f, 2.0f, 2.0f, 2.0f), // Rarity 6
-    };
-
-    // ── EquipmentSlotRatio.xlsx ───────────────────────────────────────
-
-    static readonly (float Attack, float Defence, float Hp, float Agility)[] SlotRatios =
-    {
-        (1.00f, 1.00f, 1.00f, 1.00f), // Slot  1 武器
-        (0.80f, 0.80f, 0.80f, 0.80f), // Slot  2 副手
-        (0.75f, 0.75f, 0.75f, 0.75f), // Slot  3 头盔
-        (0.90f, 0.90f, 0.90f, 0.90f), // Slot  4 胸甲
-        (0.80f, 0.80f, 0.80f, 0.80f), // Slot  5 腿甲
-        (0.75f, 0.75f, 0.75f, 0.75f), // Slot  6 靴子
-        (0.90f, 0.90f, 0.90f, 0.90f), // Slot  7 护手
-        (0.80f, 0.80f, 0.80f, 0.80f), // Slot  8 腰带
-        (0.75f, 0.75f, 0.75f, 0.75f), // Slot  9 项链
-        (0.80f, 0.80f, 0.80f, 0.80f), // Slot 10 主戒
-        (0.75f, 0.75f, 0.75f, 0.75f), // Slot 11 副戒
-        (0.90f, 0.90f, 0.90f, 0.90f), // Slot 12 圣物
-    };
 }

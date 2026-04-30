@@ -1,39 +1,38 @@
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
-using TMPro;
 
 public class EquipmentCardUI : MonoBehaviour
 {
     public static EquipmentCardUI Instance { get; private set; }
 
     [Header("Top Row")]
-    [SerializeField] Image       iconImage;
-    [SerializeField] TMP_Text    nameText;
-    [SerializeField] TMP_Text    slotText;
+    [SerializeField] Image iconImage;
+    [SerializeField] TMP_Text nameText;
+    [SerializeField] TMP_Text slotText;
 
     [Header("Stats Area")]
-    [SerializeField] Transform   statsContainer;
-    [SerializeField] GameObject  statRowPrefab;
+    [SerializeField] Transform statsContainer;
+    [SerializeField] GameObject statRowPrefab;
 
     [Header("Bottom")]
-    [SerializeField] TMP_Text    descriptionText;
+    [SerializeField] TMP_Text descriptionText;
 
     [Header("Buttons")]
-    [SerializeField] Button      equipButton;
-    [SerializeField] Button      decomposeButton;
-    [SerializeField] Button      closeButton;
+    [SerializeField] Button equipButton;
+    [SerializeField] Button decomposeButton;
+    [SerializeField] Button closeButton;
 
     [Header("Animation")]
-    [SerializeField] float       animDuration = 0.25f;
+    [SerializeField] float animDuration = 0.25f;
 
-    [Header("字体 —— 拖入支持中文的 TMP Font Asset")]
+    [Header("字体")]
     [SerializeField] TMP_FontAsset chineseFontAsset;
 
-    CanvasGroup    _canvasGroup;
+    CanvasGroup _canvasGroup;
     EquipmentResult _currentItem;
-    bool           _forced;
+    bool _forced;
 
-    // 运行时兜底：从系统字体动态生成（Inspector 已赋字体时不走此路）
     static TMP_FontAsset _runtimeFont;
 
     void Awake()
@@ -49,43 +48,19 @@ public class EquipmentCardUI : MonoBehaviour
             EnsureRuntimeFont();
     }
 
-    static void EnsureRuntimeFont()
-    {
-        if (_runtimeFont != null) return;
-        string[] candidates = { "Microsoft YaHei", "微软雅黑", "SimHei", "黑体", "NSimSun", "Heiti SC", "STHeiti" };
-        Font osFont = Font.CreateDynamicFontFromOSFont(candidates, 32);
-        if (osFont == null) return;
-        _runtimeFont = TMP_FontAsset.CreateFontAsset(osFont);
-    }
-
-    void ApplyFontToAllText()
-    {
-        TMP_FontAsset font = chineseFontAsset != null ? chineseFontAsset : _runtimeFont;
-        if (font == null) return;
-        foreach (var tmp in GetComponentsInChildren<TMP_Text>(true))
-            tmp.font = font;
-    }
-
     void Update()
     {
         if (_forced || !Input.GetMouseButtonDown(0)) return;
 
         RectTransform rt = GetComponent<RectTransform>();
         Canvas canvas = GetComponentInParent<Canvas>();
-        Camera cam = (canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay)
-            ? canvas.worldCamera : null;
+        Camera cam = canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay
+            ? canvas.worldCamera
+            : null;
 
         if (!RectTransformUtility.RectangleContainsScreenPoint(rt, Input.mousePosition, cam))
             Hide();
     }
-
-    void OnCloseButton()
-    {
-        if (_forced) return;
-        Hide();
-    }
-
-    // ── 公共接口 ──────────────────────────────────────────
 
     public void Show(EquipmentResult data)
     {
@@ -95,20 +70,14 @@ public class EquipmentCardUI : MonoBehaviour
             TreeClick.Unlock();
             return;
         }
+
         _forced = true;
         decomposeButton?.gameObject.SetActive(true);
         equipButton?.gameObject.SetActive(true);
         closeButton?.gameObject.SetActive(false);
-        _currentItem = data;
-        _canvasGroup.alpha = 0;
-        gameObject.SetActive(true);
-        Populate(data);
-        ApplyFontToAllText();
-        StopAllCoroutines();
-        StartCoroutine(AnimateFade(0f, 1f));
+        ShowInternal(data);
     }
 
-    // 从装备槽位点击查看：只显示属性，隐藏"装备"按钮（已装备）
     public void ShowFromSlot(EquipmentResult data)
     {
         if (data == null)
@@ -116,12 +85,28 @@ public class EquipmentCardUI : MonoBehaviour
             TreeClick.Unlock();
             return;
         }
+
         _forced = false;
         equipButton?.gameObject.SetActive(false);
         decomposeButton?.gameObject.SetActive(false);
         closeButton?.gameObject.SetActive(true);
+        ShowInternal(data);
+    }
+
+    public void Hide()
+    {
+        StopAllCoroutines();
+        StartCoroutine(AnimateFade(1f, 0f, () =>
+        {
+            gameObject.SetActive(false);
+            TreeClick.Unlock();
+        }));
+    }
+
+    void ShowInternal(EquipmentResult data)
+    {
         _currentItem = data;
-        _canvasGroup.alpha = 0;
+        _canvasGroup.alpha = 0f;
         gameObject.SetActive(true);
         Populate(data);
         ApplyFontToAllText();
@@ -129,33 +114,19 @@ public class EquipmentCardUI : MonoBehaviour
         StartCoroutine(AnimateFade(0f, 1f));
     }
 
-    public void Hide()
-    {
-        StopAllCoroutines();
-        StartCoroutine(AnimateFade(1f, 0f, onDone: () =>
-        {
-            gameObject.SetActive(false);
-            TreeClick.Unlock();
-        }));
-    }
-
-    // ── 填充数据 ──────────────────────────────────────────
-
     void Populate(EquipmentResult data)
     {
-        iconImage.sprite     = data.icon;
-        iconImage.enabled    = data.icon != null;
-        nameText.text        = data.itemName;
-        slotText.text        = "槽位：" + data.slotName;
-        descriptionText.text = RarityStars(data.rarity);
+        iconImage.sprite = data.icon;
+        iconImage.enabled = data.icon != null;
+        nameText.text = data.itemName;
+        slotText.text = "槽位：" + data.slotName;
+        if (descriptionText != null)
+        {
+            descriptionText.gameObject.SetActive(true);
+            descriptionText.text = RarityStars(data.rarity);
+        }
 
         BuildStatRows(data.bonusAttr);
-    }
-
-    static string RarityStars(int rarity)
-    {
-        int r = Mathf.Clamp(rarity, 1, 6);
-        return new string('★', r) + new string('☆', 6 - r);
     }
 
     void BuildStatRows(RoleAttr attr)
@@ -163,41 +134,42 @@ public class EquipmentCardUI : MonoBehaviour
         foreach (Transform child in statsContainer)
             Destroy(child.gameObject);
 
-        TryAddRow("攻击力", attr.Attack, "0");
-        TryAddRow("防御力", attr.Defence, "0");
-        TryAddRow("生命值", attr.Hp, "0");
-        TryAddRow("敏捷", attr.Agility, "0");
-        TryAddRow("暴击", attr.CritRate, "0.##", "%");
-        TryAddRow("反击", attr.CounterRate, "0.##", "%");
-        TryAddRow("连击", attr.ComboRate, "0.##", "%");
-        TryAddRow("闪避", attr.DodgeRate, "0.##", "%");
-        TryAddRow("击晕", attr.StunRate, "0.##", "%");
-        TryAddRow("吸血", attr.LifeStealRate, "0.##", "%");
-        TryAddRow("抗暴击", attr.AntiCritRate, "0.##", "%");
-        TryAddRow("抗反击", attr.AntiCounterRate, "0.##", "%");
-        TryAddRow("抗连击", attr.AntiComboRate, "0.##", "%");
-        TryAddRow("抗闪避", attr.AntiDodgeRate, "0.##", "%");
-        TryAddRow("抗击晕", attr.AntiStunRate, "0.##", "%");
-        TryAddRow("抗吸血", attr.AntiLifeStealRate, "0.##", "%");
-        TryAddRow("强化爆伤", attr.CritDmg, "0.##", "%");
-        TryAddRow("弱化爆伤", attr.AntiCritDmg, "0.##", "%");
-        TryAddRow("最终增伤", attr.DamageIncrease, "0.##", "%");
-        TryAddRow("最终减伤", attr.DamageDecrease, "0.##", "%");
-        TryAddRow("强化治疗", attr.Healing, "0.##", "%");
-        TryAddRow("弱化治疗", attr.AntiHealing, "0.##", "%");
-        TryAddRow("强化宠物", attr.PetIncrease, "0.##", "%");
-        TryAddRow("弱化宠物", attr.PetDecrease, "0.##", "%");
+        AddRow("攻击力", attr.Attack, "0");
+        AddRow("生命值", attr.Hp, "0");
+        AddRow("防御力", attr.Defence, "0");
+        AddRow("敏捷", attr.Agility, "0");
+        AddExtraRows(attr);
     }
 
-    void TryAddRow(string label, float value, string fmt, string suffix = "")
+    void AddExtraRows(RoleAttr attr)
     {
-        if (value == 0f) return;
+        TryAddFirstExtra(attr, BattleEntries);
+        TryAddFirstExtra(attr, AntiBattleEntries);
+    }
 
+    bool TryAddFirstExtra(RoleAttr attr, StatEntry[] entries)
+    {
+        foreach (var entry in entries)
+        {
+            float value = entry.Getter(attr);
+            if (Mathf.Abs(value) <= 0.001f) continue;
+            AddRow(entry.Label, value, "0.#", "%");
+            return true;
+        }
+        return false;
+    }
+
+    void AddRow(string label, float value, string fmt, string suffix = "")
+    {
         var row = Instantiate(statRowPrefab, statsContainer);
         row.GetComponent<StatRowUI>().Set(label, value, fmt, suffix);
     }
 
-    // ── 按钮回调 ─────────────────────────────────────────
+    void OnCloseButton()
+    {
+        if (_forced) return;
+        Hide();
+    }
 
     void OnEquip()
     {
@@ -214,10 +186,77 @@ public class EquipmentCardUI : MonoBehaviour
         Hide();
     }
 
-    // ── 动画 ─────────────────────────────────────────────
+    void ApplyFontToAllText()
+    {
+        TMP_FontAsset font = chineseFontAsset != null ? chineseFontAsset : _runtimeFont;
+        if (font == null) return;
 
-    System.Collections.IEnumerator AnimateFade(float from, float to,
-                                               System.Action onDone = null)
+        foreach (var tmp in GetComponentsInChildren<TMP_Text>(true))
+            tmp.font = font;
+    }
+
+    static void EnsureRuntimeFont()
+    {
+        if (_runtimeFont != null) return;
+
+        string[] candidates = { "Microsoft YaHei", "SimHei", "NSimSun", "Heiti SC", "STHeiti" };
+        Font osFont = Font.CreateDynamicFontFromOSFont(candidates, 32);
+        if (osFont == null) return;
+        _runtimeFont = TMP_FontAsset.CreateFontAsset(osFont);
+    }
+
+    static string RarityName(int rarity)
+    {
+        switch (Mathf.Clamp(rarity, 1, 6))
+        {
+            case 1: return "下品";
+            case 2: return "中品";
+            case 3: return "上品";
+            case 4: return "极品";
+            case 5: return "绝品";
+            default: return "神品";
+        }
+    }
+
+    static string RarityStars(int rarity)
+    {
+        int r = Mathf.Clamp(rarity, 1, 6);
+        return new string('★', r) + new string('☆', 6 - r);
+    }
+
+    readonly struct StatEntry
+    {
+        public readonly string Label;
+        public readonly System.Func<RoleAttr, float> Getter;
+
+        public StatEntry(string label, System.Func<RoleAttr, float> getter)
+        {
+            Label = label;
+            Getter = getter;
+        }
+    }
+
+    static readonly StatEntry[] BattleEntries =
+    {
+        new StatEntry("暴击", a => a.CritRate),
+        new StatEntry("反击", a => a.CounterRate),
+        new StatEntry("连击", a => a.ComboRate),
+        new StatEntry("闪避", a => a.DodgeRate),
+        new StatEntry("击晕", a => a.StunRate),
+        new StatEntry("吸血", a => a.LifeStealRate),
+    };
+
+    static readonly StatEntry[] AntiBattleEntries =
+    {
+        new StatEntry("抗暴击", a => a.AntiCritRate),
+        new StatEntry("抗反击", a => a.AntiCounterRate),
+        new StatEntry("抗连击", a => a.AntiComboRate),
+        new StatEntry("抗闪避", a => a.AntiDodgeRate),
+        new StatEntry("抗击晕", a => a.AntiStunRate),
+        new StatEntry("抗吸血", a => a.AntiLifeStealRate),
+    };
+
+    System.Collections.IEnumerator AnimateFade(float from, float to, System.Action onDone = null)
     {
         float elapsed = 0f;
         _canvasGroup.alpha = from;
@@ -227,6 +266,7 @@ public class EquipmentCardUI : MonoBehaviour
             _canvasGroup.alpha = Mathf.Lerp(from, to, elapsed / animDuration);
             yield return null;
         }
+
         _canvasGroup.alpha = to;
         onDone?.Invoke();
     }
