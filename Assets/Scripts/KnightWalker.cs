@@ -21,13 +21,12 @@ public class KnightWalker : MonoBehaviour
     public float breathFrequency  = 1.2f;
 
     [Header("Footstep Bob")]
-    public float bobAmplitude  = 0.06f;   // world units
-    public float bobFrequency  = 2.5f;    // bobs per second
+    public float bobAmplitude  = 0.06f;
+    public float bobFrequency  = 2.5f;
 
     [Header("Shadow")]
     public float shadowAlpha   = 0.35f;
     public float shadowScaleY  = 0.12f;
-    // Local offset from sprite center to ground level — adjust until it sits on the feet
     public Vector2 shadowOffset = new Vector2(0f, -0.45f);
 
     enum State { Walking, Idle }
@@ -108,7 +107,6 @@ public class KnightWalker : MonoBehaviour
             else                           EnterWalk(RandomDir());
         }
 
-        // Footstep bob: Abs(Sin) = always-upward bounce, like real steps
         _bobPhase += Time.deltaTime * bobFrequency * Mathf.PI * 2f;
         float bob = Mathf.Abs(Mathf.Sin(_bobPhase)) * bobAmplitude;
         var pos = transform.position;
@@ -120,7 +118,6 @@ public class KnightWalker : MonoBehaviour
     {
         if (_stateTimer <= 0f) EnterWalk(RandomDir());
 
-        // Smoothly sink back to ground when stopping
         var pos = transform.position;
         pos.y = Mathf.Lerp(pos.y, _baseY, Time.deltaTime * 10f);
         transform.position = pos;
@@ -160,8 +157,7 @@ public class KnightWalker : MonoBehaviour
 
         _shadow.flipX = _sr.flipX;
 
-        // Shadow shrinks a little when knight is higher, like a top-down light source
-        float rise        = (transform.position.y - _baseY) / (bobAmplitude + 0.001f); // 0~1
+        float rise        = (transform.position.y - _baseY) / (bobAmplitude + 0.001f);
         float scaleX      = Mathf.Lerp(1f, 0.75f, rise);
         _shadow.transform.localScale = new Vector3(scaleX, shadowScaleY, 1f);
     }

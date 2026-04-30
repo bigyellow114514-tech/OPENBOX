@@ -39,6 +39,9 @@ public class TreeClick : MonoBehaviour
         Vector2 worldPos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
         if (col.OverlapPoint(worldPos))
         {
+            if (PlayerStaminaManager.Instance != null && !PlayerStaminaManager.Instance.TryConsume())
+                return;
+
             StartCoroutine(PunchScale());
             SpawnBox();
             PlayerExpManager.Instance?.AddExp(10f);
