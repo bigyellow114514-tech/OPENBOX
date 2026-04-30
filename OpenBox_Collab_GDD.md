@@ -174,7 +174,7 @@ flowchart TD
 | 抗暴击 | 减少对方暴击 |
 | 抗反击 | 减少对方反击 |
 | 抗连击 | 减少对方连击 |
-| 抗闪避 | 减少对方连击 |
+| 抗闪避 | 减少对方闪避 |
 | 抗击晕 | 减少对方击晕 |
 | 抗吸血 | 减少对方吸血 |
 
@@ -421,17 +421,30 @@ MVP 采用自动回合制战斗。
 伤害 = max(1, 攻击 - 防御) × max(1,(1 + 最终增伤 - 对方最终减伤))
 ```
 
+其中百分比属性按表格值除以 `100` 后参与计算。
+
 若暴击：
 
 ```text
-暴击伤害 = 伤害 × (1 + 爆伤)
+有效暴击率 = max(0, 暴击 - 对方抗暴击)
+暴击伤害 = 伤害 × (1 + max(0, 强化爆伤 - 对方弱化爆伤))
 ```
 
 吸血：
 
 ```text
-吸血值 = 伤害 × 吸血率
+有效吸血率 = max(0, 吸血 - 对方抗吸血)
+基础吸血值 = 伤害 × 有效吸血率
+吸血值 = floor(基础吸血值 × max(0, 1 + 强化治疗 - 对方弱化治疗))
 ```
+
+治疗：
+
+```text
+治疗值 = floor(基础治疗值 × max(0, 1 + 施法方强化治疗 - 目标方弱化治疗))
+```
+
+目前暂无主动治疗技能；该公式先用于吸血回复，后续治疗技能接入同一计算方式。
 
 
 ### 9.3 连击
@@ -701,11 +714,11 @@ flowchart TD
 
 | 字段 | 类型 | 说明 |
 |---|---|---|
-| AttrKey | string | 属性 ID，例如 Attack |
-| AttrName | string | 中文名，例如 攻击力 |
-| BaseValue | number | 初始值 |
-| IsPercent | bool | 是否为百分比属性 |
-| Comment | string | 备注 |
+| ID | int | 属性 ID |
+| Attr | string | 属性 key，例如 Attack |
+| AttrName | string | 中文显示名，例如 攻击力 |
+| InitValue | number | 角色初始值 |
+| AttrType | string | 数值类型：绝对值 / 百分比 |
 
 ### 13.2 Tree.xlsx
 
@@ -757,21 +770,34 @@ flowchart TD
 
 | 字段 | 类型 | 说明 |
 |---|---|---|
-| StageId | int | 关卡 ID |
-| StageName | string | 关卡名 |
-| MaxRound | int | 最大回合数 |
-| EnemyHp | number | 敌方生命 |
-| EnemyAttack | number | 敌方攻击 |
-| EnemyDefense | number | 敌方防御 |
-| EnemyAgility | number | 敌方敏捷 |
-| EnemyCritRate | number | 敌方暴击率 |
-| EnemyCritDamage | number | 敌方爆伤 |
-| EnemyCounterRate | number | 敌方反击率 |
-| EnemyComboRate | number | 敌方连击率 |
-| EnemyDodgeRate | number | 敌方闪避率 |
-| EnemyStunRate | number | 敌方击晕率 |
-| EnemyLifeStealRate | number | 敌方吸血率 |
-| PetTicketReward | int | 通关宠物券奖励 |
+| StageID | int | 关卡 ID |
+| Attack | number | 敌方攻击 |
+| Defence | number | 敌方防御 |
+| Hp | number | 敌方生命 |
+| Agility | number | 敌方敏捷 |
+| CritRate | number | 敌方暴击 |
+| CounterRate | number | 敌方反击 |
+| ComboRate | number | 敌方连击 |
+| DodgeRate | number | 敌方闪避 |
+| StunRate | number | 敌方击晕 |
+| LifeStealRate | number | 敌方吸血 |
+| AntiCritRate | number | 敌方抗暴击 |
+| AntiCounterRate | number | 敌方抗反击 |
+| AntiComboRate | number | 敌方抗连击 |
+| AntiDodgeRate | number | 敌方抗闪避 |
+| AntiStunRate | number | 敌方抗击晕 |
+| AntiLifeStealRate | number | 敌方抗吸血 |
+| CritDmg | number | 敌方强化爆伤 |
+| AntiCritDmg | number | 敌方弱化爆伤 |
+| DamageIncrease | number | 敌方最终增伤 |
+| DamageDecrease | number | 敌方最终减伤 |
+| Healing | number | 敌方强化治疗 |
+| AntiHealing | number | 敌方弱化治疗 |
+| PetIncrease | number | 敌方强化宠物 |
+| PetDecrease | number | 敌方弱化宠物 |
+| MonsterAvatar | string | 怪物形象 ID |
+| RewardEnergy | int | 过关奖励体力 |
+| RewardSpeedUp | int | 过关奖励加速道具 |
 
 ---
 
@@ -919,4 +945,3 @@ flowchart TD
 | 版本 | 日期 | 修改人 | 内容 |
 |---|---|---|---|
 | v0.1 | 2026-04-28 | AI 整理 | 根据初版 PDF 整理为协作开发 Markdown |
-

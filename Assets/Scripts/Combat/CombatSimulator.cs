@@ -62,7 +62,7 @@ public static class CombatSimulator
             bool interruptedByCounter = ResolveHit(result, round, actor, target, player, enemy, false);
             if (actor.IsDead || target.IsDead || interruptedByCounter) return;
 
-            if (Roll(actor.Attr.ComboRate) && comboCount < MaxComboHits)
+            if (Roll(EffectiveRate(actor.Attr.ComboRate, target.Attr.AntiComboRate)) && comboCount < MaxComboHits)
             {
                 comboCount++;
                 keepAttacking = true;
@@ -81,30 +81,21 @@ public static class CombatSimulator
         CombatantState enemy,
         bool isCounter)
     {
-        if (Roll(target.Attr.DodgeRate))
+        if (Roll(EffectiveRate(target.Attr.DodgeRate, actor.Attr.AntiDodgeRate)))
         {
             AddAttack(result, round, actor, target, player, enemy, 0f, 0f, false, true, false, isCounter);
             return TryCounter(result, round, actor, target, player, enemy);
         }
 
-        float damage = Mathf.Max(1f, actor.Attr.Attack - target.Attr.Defence);
-        bool crit = Roll(actor.Attr.CritRate);
-        if (crit)
-            damage *= 1f + Mathf.Max(0f, actor.Attr.CritDmg) / 100f;
-
-        damage = Mathf.Ceil(damage);
+        float damage = CalculateDamage(actor.Attr, target.Attr, out bool crit);
         target.CurrentHp = Mathf.Max(0f, target.CurrentHp - damage);
 
-        string line = actor.Name + " hits " + target.Name + " for " + damage.ToString("0");
-        if (crit) line += " (crit)";
-        if (isCounter) line += " (counter)";
-
-        float heal = Mathf.Floor(damage * Mathf.Max(0f, actor.Attr.LifeStealRate) / 100f);
+        float heal = CalculateLifeStealHeal(actor.Attr, target.Attr, damage);
         if (heal > 0f)
             actor.CurrentHp = Mathf.Min(actor.MaxHp, actor.CurrentHp + heal);
 
         bool stunned = false;
-        if (!target.IsDead && !isCounter && Roll(actor.Attr.StunRate))
+        if (!target.IsDead && !isCounter && Roll(EffectiveRate(actor.Attr.StunRate, target.Attr.AntiStunRate)))
         {
             target.Stunned = true;
             stunned = true;
@@ -118,6 +109,31 @@ public static class CombatSimulator
         return TryCounter(result, round, actor, target, player, enemy);
     }
 
+    static float CalculateDamage(RoleAttr actor, RoleAttr target, out bool crit)
+    {
+        float damage = Mathf.Max(1f, actor.Attack - target.Defence);
+        float finalDamageScale = Mathf.Max(1f, 1f + Percent(actor.DamageIncrease - target.DamageDecrease));
+        damage *= finalDamageScale;
+
+        crit = Roll(EffectiveRate(actor.CritRate, target.AntiCritRate));
+        if (crit)
+            damage *= 1f + Percent(Mathf.Max(0f, actor.CritDmg - target.AntiCritDmg));
+
+        return Mathf.Ceil(damage);
+    }
+
+    static float CalculateLifeStealHeal(RoleAttr actor, RoleAttr target, float damage)
+    {
+        float baseHeal = damage * Percent(EffectiveRate(actor.LifeStealRate, target.AntiLifeStealRate));
+        return CalculateHealing(actor, target, baseHeal);
+    }
+
+    public static float CalculateHealing(RoleAttr healer, RoleAttr target, float baseHeal)
+    {
+        float healingScale = Mathf.Max(0f, 1f + Percent(healer.Healing - target.AntiHealing));
+        return Mathf.Floor(Mathf.Max(0f, baseHeal) * healingScale);
+    }
+
     static bool TryCounter(
         CombatResult result,
         int round,
@@ -126,7 +142,7 @@ public static class CombatSimulator
         CombatantState player,
         CombatantState enemy)
     {
-        if (!Roll(target.Attr.CounterRate)) return false;
+        if (!Roll(EffectiveRate(target.Attr.CounterRate, actor.Attr.AntiCounterRate))) return false;
 
         AddPopup(result, round, target, actor, player, enemy, "Counter");
         ResolveHit(result, round, target, actor, player, enemy, true);
@@ -136,6 +152,16 @@ public static class CombatSimulator
     static bool Roll(float ratePercent)
     {
         return Random.value < Mathf.Clamp01(ratePercent / 100f);
+    }
+
+    static float EffectiveRate(float ratePercent, float antiRatePercent)
+    {
+        return Mathf.Max(0f, ratePercent - antiRatePercent);
+    }
+
+    static float Percent(float value)
+    {
+        return value / 100f;
     }
 
     static void AddAttack(

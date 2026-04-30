@@ -120,17 +120,30 @@ public class EquipmentCompareUI : MonoBehaviour
     {
         foreach (Transform child in container) Destroy(child.gameObject);
 
-        TryAddRow(container, "攻击力", attr.Attack,        delta?.Attack,        "0");
-        TryAddRow(container, "防御力", attr.Defence,       delta?.Defence,       "0");
-        TryAddRow(container, "生命值", attr.Hp,            delta?.Hp,            "0");
-        TryAddRow(container, "敏捷",   attr.Agility,       delta?.Agility,       "0");
-        TryAddRow(container, "暴击率", attr.CritRate,      delta?.CritRate,      "0.##", "%");
-        TryAddRow(container, "爆伤",   attr.CritDmg,       delta?.CritDmg,       "0.##", "%");
-        TryAddRow(container, "反击",   attr.CounterRate,   delta?.CounterRate,   "0.##", "%");
-        TryAddRow(container, "连击",   attr.ComboRate,     delta?.ComboRate,     "0.##", "%");
-        TryAddRow(container, "闪避",   attr.DodgeRate,     delta?.DodgeRate,     "0.##", "%");
-        TryAddRow(container, "击晕",   attr.StunRate,      delta?.StunRate,      "0.##", "%");
-        TryAddRow(container, "吸血",   attr.LifeStealRate, delta?.LifeStealRate, "0.##", "%");
+        TryAddRow(container, "攻击力", attr.Attack, delta?.Attack, "0");
+        TryAddRow(container, "防御力", attr.Defence, delta?.Defence, "0");
+        TryAddRow(container, "生命值", attr.Hp, delta?.Hp, "0");
+        TryAddRow(container, "敏捷", attr.Agility, delta?.Agility, "0");
+        TryAddRow(container, "暴击", attr.CritRate, delta?.CritRate, "0.##", "%");
+        TryAddRow(container, "反击", attr.CounterRate, delta?.CounterRate, "0.##", "%");
+        TryAddRow(container, "连击", attr.ComboRate, delta?.ComboRate, "0.##", "%");
+        TryAddRow(container, "闪避", attr.DodgeRate, delta?.DodgeRate, "0.##", "%");
+        TryAddRow(container, "击晕", attr.StunRate, delta?.StunRate, "0.##", "%");
+        TryAddRow(container, "吸血", attr.LifeStealRate, delta?.LifeStealRate, "0.##", "%");
+        TryAddRow(container, "抗暴击", attr.AntiCritRate, delta?.AntiCritRate, "0.##", "%");
+        TryAddRow(container, "抗反击", attr.AntiCounterRate, delta?.AntiCounterRate, "0.##", "%");
+        TryAddRow(container, "抗连击", attr.AntiComboRate, delta?.AntiComboRate, "0.##", "%");
+        TryAddRow(container, "抗闪避", attr.AntiDodgeRate, delta?.AntiDodgeRate, "0.##", "%");
+        TryAddRow(container, "抗击晕", attr.AntiStunRate, delta?.AntiStunRate, "0.##", "%");
+        TryAddRow(container, "抗吸血", attr.AntiLifeStealRate, delta?.AntiLifeStealRate, "0.##", "%");
+        TryAddRow(container, "强化爆伤", attr.CritDmg, delta?.CritDmg, "0.##", "%");
+        TryAddRow(container, "弱化爆伤", attr.AntiCritDmg, delta?.AntiCritDmg, "0.##", "%");
+        TryAddRow(container, "最终增伤", attr.DamageIncrease, delta?.DamageIncrease, "0.##", "%");
+        TryAddRow(container, "最终减伤", attr.DamageDecrease, delta?.DamageDecrease, "0.##", "%");
+        TryAddRow(container, "强化治疗", attr.Healing, delta?.Healing, "0.##", "%");
+        TryAddRow(container, "弱化治疗", attr.AntiHealing, delta?.AntiHealing, "0.##", "%");
+        TryAddRow(container, "强化宠物", attr.PetIncrease, delta?.PetIncrease, "0.##", "%");
+        TryAddRow(container, "弱化宠物", attr.PetDecrease, delta?.PetDecrease, "0.##", "%");
     }
 
     void TryAddRow(Transform container, string label, float value, float? delta,

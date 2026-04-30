@@ -1,32 +1,21 @@
+using System.IO;
 using UnityEngine;
 
 public class PlayerCharacter : MonoBehaviour
 {
     public static PlayerCharacter Instance { get; private set; }
 
-    // Level is owned by PlayerExpManager; expose here for convenience
-    public int Level => PlayerExpManager.Instance != null ? PlayerExpManager.Instance.Level : 1;
+    const string RoleAttrXlsxRelativePath = "Excel/RoleAttr.xlsx";
 
-    // Base attributes from RoleAttr.xlsx — leveling up does NOT change these
-    static readonly RoleAttr BaseAttr = new RoleAttr
-    {
-        Attack        = 10,
-        Defence       = 1,
-        Hp            = 100,
-        Agility       = 5,
-        CritRate      = 5,    // 5%
-        CritDmg       = 100,  // 100%
-        CounterRate   = 0,
-        ComboRate     = 0,
-        DodgeRate     = 0,
-        StunRate      = 0,
-        LifeStealRate = 0,
-    };
+    static bool _baseAttrLoaded;
+    static RoleAttr _baseAttr;
 
     RoleAttr _equipAttr;
 
-    // Final panel value = base + equipment
-    public RoleAttr FinalAttr => BaseAttr + _equipAttr;
+    public int Level => PlayerExpManager.Instance != null ? PlayerExpManager.Instance.Level : 1;
+    public RoleAttr BaseAttr => GetBaseAttr();
+    public RoleAttr EquipAttr => _equipAttr;
+    public RoleAttr FinalAttr => GetBaseAttr() + _equipAttr;
 
     public event System.Action OnAttrChanged;
 
@@ -34,6 +23,7 @@ public class PlayerCharacter : MonoBehaviour
     {
         if (Instance != null) { Destroy(gameObject); return; }
         Instance = this;
+        GetBaseAttr();
     }
 
     public void AddEquipAttr(RoleAttr attr)
@@ -52,5 +42,59 @@ public class PlayerCharacter : MonoBehaviour
     {
         _equipAttr = default;
         OnAttrChanged?.Invoke();
+    }
+
+    static RoleAttr GetBaseAttr()
+    {
+        if (_baseAttrLoaded) return _baseAttr;
+
+        _baseAttrLoaded = true;
+        _baseAttr = DefaultBaseAttr();
+
+        string path = Path.Combine(Application.dataPath, RoleAttrXlsxRelativePath);
+        if (!File.Exists(path))
+        {
+            Debug.LogWarning("[PlayerCharacter] RoleAttr.xlsx not found, using fallback base attributes: " + path);
+            return _baseAttr;
+        }
+
+        try
+        {
+            ExcelTable table = ExcelTable.Load(path);
+            if (table.Rows.Count < 4) return _baseAttr;
+
+            var columns = table.ReadHeader(2);
+            RoleAttr loaded = _baseAttr;
+
+            for (int i = 3; i < table.Rows.Count; i++)
+            {
+                ExcelRow row = table.Rows[i];
+                string key = row.Get(columns, "Attr");
+                if (string.IsNullOrEmpty(key)) continue;
+
+                loaded.SetByKey(key, row.GetFloat(columns, "InitValue"));
+            }
+
+            _baseAttr = loaded;
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogError("[PlayerCharacter] Failed to read RoleAttr.xlsx, using fallback base attributes: " + e.Message);
+        }
+
+        return _baseAttr;
+    }
+
+    static RoleAttr DefaultBaseAttr()
+    {
+        return new RoleAttr
+        {
+            Attack = 10,
+            Defence = 1,
+            Hp = 100,
+            Agility = 5,
+            CritRate = 5,
+            CritDmg = 100,
+        };
     }
 }

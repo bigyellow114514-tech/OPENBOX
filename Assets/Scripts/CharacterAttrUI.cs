@@ -5,41 +5,63 @@ public class CharacterAttrUI : MonoBehaviour
     bool _show;
 
     Texture2D _bgTex;
-    Texture2D _borderTex;
-    GUIStyle  _titleStyle;
-    GUIStyle  _rowStyle;
-    GUIStyle  _btnStyle;
+    Texture2D _sectionTex;
+    Texture2D _buttonTex;
+    GUIStyle _buttonStyle;
+    GUIStyle _titleStyle;
+    GUIStyle _sectionTitleStyle;
+    GUIStyle _labelStyle;
+    GUIStyle _valueStyle;
 
     void Start()
     {
-        _bgTex     = MakeTex(new Color(0.08f, 0.08f, 0.08f, 0.92f));
-        _borderTex = MakeTex(new Color(0.00f, 0.00f, 0.00f, 1.00f));
+        _bgTex = MakeTex(new Color(0.06f, 0.16f, 0.18f, 0.88f));
+        _sectionTex = MakeTex(new Color(0.05f, 0.12f, 0.14f, 0.70f));
+        _buttonTex = MakeTex(new Color(0.10f, 0.25f, 0.28f, 0.92f));
     }
 
     void InitStyles()
     {
-        if (_btnStyle != null) return;
+        if (_buttonStyle != null) return;
 
-        _btnStyle = new GUIStyle(GUI.skin.button)
+        _buttonStyle = new GUIStyle(GUI.skin.button)
         {
-            fontSize  = 13,
+            fontSize = 14,
             fontStyle = FontStyle.Bold,
-            normal    = { textColor = Color.white }
+            alignment = TextAnchor.MiddleCenter,
+            normal = { textColor = Color.white, background = _buttonTex },
+            hover = { textColor = Color.white, background = _buttonTex },
         };
 
         _titleStyle = new GUIStyle(GUI.skin.label)
         {
-            fontSize   = 15,
-            fontStyle  = FontStyle.Bold,
-            alignment  = TextAnchor.MiddleCenter,
-            normal     = { textColor = Color.yellow }
+            fontSize = 18,
+            fontStyle = FontStyle.Bold,
+            alignment = TextAnchor.MiddleCenter,
+            normal = { textColor = new Color(0.94f, 0.96f, 0.92f) },
         };
 
-        _rowStyle = new GUIStyle(GUI.skin.label)
+        _sectionTitleStyle = new GUIStyle(GUI.skin.label)
         {
-            fontSize  = 13,
+            fontSize = 15,
+            fontStyle = FontStyle.Bold,
+            alignment = TextAnchor.MiddleCenter,
+            normal = { textColor = new Color(0.78f, 0.84f, 0.82f) },
+        };
+
+        _labelStyle = new GUIStyle(GUI.skin.label)
+        {
+            fontSize = 14,
+            alignment = TextAnchor.MiddleRight,
+            normal = { textColor = new Color(0.78f, 0.84f, 0.82f) },
+        };
+
+        _valueStyle = new GUIStyle(GUI.skin.label)
+        {
+            fontSize = 14,
+            fontStyle = FontStyle.Bold,
             alignment = TextAnchor.MiddleLeft,
-            normal    = { textColor = Color.white }
+            normal = { textColor = new Color(0.96f, 0.90f, 0.58f) },
         };
     }
 
@@ -47,11 +69,10 @@ public class CharacterAttrUI : MonoBehaviour
     {
         InitStyles();
 
-        // 左上角按钮
-        if (GUI.Button(new Rect(10, 10, 70, 28), "角色属性", _btnStyle))
+        if (GUI.Button(new Rect(10, 10, 88, 30), "角色属性", _buttonStyle))
             _show = !_show;
 
-        if (GUI.Button(new Rect(86, 10, 70, 28), "初始化角色", _btnStyle))
+        if (GUI.Button(new Rect(104, 10, 88, 30), "初始化", _buttonStyle))
         {
             PlayerExpManager.Instance?.ResetToDefault();
             EquipmentSlotSystem.Instance?.ResetToDefault();
@@ -59,52 +80,105 @@ public class CharacterAttrUI : MonoBehaviour
 
         if (!_show) return;
 
-        var chr = PlayerCharacter.Instance;
-        var exp = PlayerExpManager.Instance;
+        PlayerCharacter chr = PlayerCharacter.Instance;
+        PlayerExpManager exp = PlayerExpManager.Instance;
         if (chr == null || exp == null) return;
 
         RoleAttr attr = chr.FinalAttr;
-
-        float panelW = 220f;
-        float rowH   = 24f;
-        float pad    = 10f;
-        int   rows   = 13; // 标题 + 等级 + 11属性
-        float panelH = pad * 2 + rows * rowH;
+        float panelW = Mathf.Min(430f, Screen.width - 20f);
         float panelX = 10f;
-        float panelY = 44f;
+        float panelY = 48f;
+        float pad = 10f;
+        float titleH = 30f;
+        float sectionGap = 8f;
+        float panelH = 510f;
 
-        // 边框 + 背景
-        GUI.DrawTexture(new Rect(panelX - 2, panelY - 2, panelW + 4, panelH + 4), _borderTex);
         GUI.DrawTexture(new Rect(panelX, panelY, panelW, panelH), _bgTex);
+        GUI.Label(new Rect(panelX + pad, panelY + 6f, panelW - pad * 2f, titleH), "详细属性", _titleStyle);
+        GUI.Label(new Rect(panelX + pad, panelY + 32f, panelW - pad * 2f, 22f),
+            "等级 " + (exp.Level >= 100 ? "MAX" : exp.Level.ToString()), _sectionTitleStyle);
 
-        float y = panelY + pad;
-        float lx = panelX + pad;
-        float lw = panelW - pad * 2;
+        float y = panelY + 58f;
+        DrawSection(panelX + pad, ref y, panelW - pad * 2f, "基础属性", new[]
+        {
+            Stat("攻击", attr.Attack, false),
+            Stat("生命", attr.Hp, false),
+            Stat("防御", attr.Defence, false),
+            Stat("敏捷", attr.Agility, false),
+        }, 3);
 
-        GUI.Label(new Rect(lx, y, lw, rowH), "— 角色属性 —", _titleStyle);
-        y += rowH;
+        y += sectionGap;
+        DrawSection(panelX + pad, ref y, panelW - pad * 2f, "战斗属性", new[]
+        {
+            Stat("暴击", attr.CritRate),
+            Stat("反击", attr.CounterRate),
+            Stat("连击", attr.ComboRate),
+            Stat("闪避", attr.DodgeRate),
+            Stat("击晕", attr.StunRate),
+            Stat("吸血", attr.LifeStealRate),
+        }, 3);
 
-        DrawRow(ref y, lx, lw, rowH, "等级",
-            exp.Level >= 100 ? "MAX" : exp.Level.ToString());
+        y += sectionGap;
+        DrawSection(panelX + pad, ref y, panelW - pad * 2f, "战斗抗性", new[]
+        {
+            Stat("抗暴击", attr.AntiCritRate),
+            Stat("抗反击", attr.AntiCounterRate),
+            Stat("抗连击", attr.AntiComboRate),
+            Stat("抗闪避", attr.AntiDodgeRate),
+            Stat("抗击晕", attr.AntiStunRate),
+            Stat("抗吸血", attr.AntiLifeStealRate),
+        }, 3);
 
-        DrawRow(ref y, lx, lw, rowH, "攻击力",   attr.Attack.ToString("0"));
-        DrawRow(ref y, lx, lw, rowH, "防御力",   attr.Defence.ToString("0"));
-        DrawRow(ref y, lx, lw, rowH, "生命值",   attr.Hp.ToString("0"));
-        DrawRow(ref y, lx, lw, rowH, "敏捷",     attr.Agility.ToString("0"));
-        DrawRow(ref y, lx, lw, rowH, "暴击率",   attr.CritRate.ToString("0.##") + "%");
-        DrawRow(ref y, lx, lw, rowH, "爆伤",     attr.CritDmg.ToString("0.##") + "%");
-        DrawRow(ref y, lx, lw, rowH, "反击",     attr.CounterRate.ToString("0.##") + "%");
-        DrawRow(ref y, lx, lw, rowH, "连击",     attr.ComboRate.ToString("0.##") + "%");
-        DrawRow(ref y, lx, lw, rowH, "闪避",     attr.DodgeRate.ToString("0.##") + "%");
-        DrawRow(ref y, lx, lw, rowH, "击晕",     attr.StunRate.ToString("0.##") + "%");
-        DrawRow(ref y, lx, lw, rowH, "吸血",     attr.LifeStealRate.ToString("0.##") + "%");
+        y += sectionGap;
+        DrawSection(panelX + pad, ref y, panelW - pad * 2f, "特殊属性", new[]
+        {
+            Stat("强化爆伤", attr.CritDmg),
+            Stat("弱化爆伤", attr.AntiCritDmg),
+            Stat("最终增伤", attr.DamageIncrease),
+            Stat("最终减伤", attr.DamageDecrease),
+            Stat("强化治疗", attr.Healing),
+            Stat("弱化治疗", attr.AntiHealing),
+            Stat("强化宠物", attr.PetIncrease),
+            Stat("弱化宠物", attr.PetDecrease),
+        }, 3);
     }
 
-    void DrawRow(ref float y, float x, float w, float h, string label, string value)
+    void DrawSection(float x, ref float y, float w, string title, StatItem[] items, int columns)
     {
-        GUI.Label(new Rect(x,           y, w * 0.55f, h), label, _rowStyle);
-        GUI.Label(new Rect(x + w * 0.55f, y, w * 0.45f, h), value, _rowStyle);
+        float titleH = 24f;
+        float rowH = 24f;
+        int rows = Mathf.CeilToInt(items.Length / (float)columns);
+        float h = titleH + rows * rowH + 10f;
+
+        GUI.DrawTexture(new Rect(x, y, w, h), _sectionTex);
+        GUI.Label(new Rect(x, y + 4f, w, titleH), title, _sectionTitleStyle);
+
+        float cellW = w / columns;
+        for (int i = 0; i < items.Length; i++)
+        {
+            int row = i / columns;
+            int col = i % columns;
+            float cx = x + col * cellW;
+            float cy = y + titleH + row * rowH + 6f;
+            DrawStat(cx, cy, cellW, rowH, items[i]);
+        }
+
         y += h;
+    }
+
+    void DrawStat(float x, float y, float w, float h, StatItem item)
+    {
+        GUI.Label(new Rect(x, y, w * 0.50f, h), item.Label, _labelStyle);
+        GUI.Label(new Rect(x + w * 0.52f, y, w * 0.48f, h), item.Text, _valueStyle);
+    }
+
+    static StatItem Stat(string label, float value, bool percent = true)
+    {
+        return new StatItem
+        {
+            Label = label,
+            Text = percent ? value.ToString("0.##") + "%" : value.ToString("0"),
+        };
     }
 
     Texture2D MakeTex(Color c)
@@ -113,5 +187,11 @@ public class CharacterAttrUI : MonoBehaviour
         t.SetPixel(0, 0, c);
         t.Apply();
         return t;
+    }
+
+    struct StatItem
+    {
+        public string Label;
+        public string Text;
     }
 }

@@ -24,6 +24,10 @@ public class EquipmentSlotSystem : MonoBehaviour
         public float  attack, defence, hp, agility;
         public float  critRate, critDmg, counterRate, comboRate;
         public float  dodgeRate, stunRate, lifeStealRate;
+        public float  antiCritRate, antiCounterRate, antiComboRate;
+        public float  antiDodgeRate, antiStunRate, antiLifeStealRate;
+        public float  antiCritDmg, damageIncrease, damageDecrease;
+        public float  healing, antiHealing, petIncrease, petDecrease;
     }
 
     void Awake()
@@ -72,6 +76,19 @@ public class EquipmentSlotSystem : MonoBehaviour
                     DodgeRate     = s.dodgeRate,
                     StunRate      = s.stunRate,
                     LifeStealRate = s.lifeStealRate,
+                    AntiCritRate = s.antiCritRate,
+                    AntiCounterRate = s.antiCounterRate,
+                    AntiComboRate = s.antiComboRate,
+                    AntiDodgeRate = s.antiDodgeRate,
+                    AntiStunRate = s.antiStunRate,
+                    AntiLifeStealRate = s.antiLifeStealRate,
+                    AntiCritDmg = s.antiCritDmg,
+                    DamageIncrease = s.damageIncrease,
+                    DamageDecrease = s.damageDecrease,
+                    Healing = s.healing,
+                    AntiHealing = s.antiHealing,
+                    PetIncrease = s.petIncrease,
+                    PetDecrease = s.petDecrease,
                 }
             };
         }
@@ -111,6 +128,19 @@ public class EquipmentSlotSystem : MonoBehaviour
                 dodgeRate     = s.bonusAttr.DodgeRate,
                 stunRate      = s.bonusAttr.StunRate,
                 lifeStealRate = s.bonusAttr.LifeStealRate,
+                antiCritRate = s.bonusAttr.AntiCritRate,
+                antiCounterRate = s.bonusAttr.AntiCounterRate,
+                antiComboRate = s.bonusAttr.AntiComboRate,
+                antiDodgeRate = s.bonusAttr.AntiDodgeRate,
+                antiStunRate = s.bonusAttr.AntiStunRate,
+                antiLifeStealRate = s.bonusAttr.AntiLifeStealRate,
+                antiCritDmg = s.bonusAttr.AntiCritDmg,
+                damageIncrease = s.bonusAttr.DamageIncrease,
+                damageDecrease = s.bonusAttr.DamageDecrease,
+                healing = s.bonusAttr.Healing,
+                antiHealing = s.bonusAttr.AntiHealing,
+                petIncrease = s.bonusAttr.PetIncrease,
+                petDecrease = s.bonusAttr.PetDecrease,
             };
         }
         PlayerPrefs.SetString(KeySlots, JsonUtility.ToJson(data));
