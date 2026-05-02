@@ -110,6 +110,7 @@ public static class EquipmentCardBuilder
             slotName  = "武器",
             icon      = null,
             rarity    = 3,
+            equipLevel = 12,
             bonusAttr = new RoleAttr { Attack = 350, CritRate = 8, CritDmg = 50 }
         };
         ui.Show(dummy);
@@ -232,6 +233,21 @@ public static class EquipmentCardBuilder
         var itemIconImg = itemIcon.AddComponent<Image>();
         itemIconImg.preserveAspect = true;
 
+        var levelGO = MakeUIGO("LevelText", iconSlot.transform);
+        var levelRect = levelGO.GetComponent<RectTransform>();
+        levelRect.anchorMin = new Vector2(0f, 0f);
+        levelRect.anchorMax = new Vector2(1f, 0f);
+        levelRect.pivot = new Vector2(0.5f, 0f);
+        levelRect.anchoredPosition = new Vector2(0f, 4f);
+        levelRect.sizeDelta = new Vector2(0f, 18f);
+        var levelText = levelGO.AddComponent<TextMeshProUGUI>();
+        levelText.text = "Lv.1";
+        levelText.fontSize = 13f;
+        levelText.fontStyle = FontStyles.Bold;
+        levelText.alignment = TextAlignmentOptions.Center;
+        levelText.color = new Color(0.22f, 0.10f, 0.02f);
+        if (font != null) levelText.font = font;
+
         // InfoGroup
         var infoGroup  = MakeUIGO("InfoGroup", topRow.transform);
         var infoGroupLE = infoGroup.AddComponent<LayoutElement>();
@@ -334,6 +350,7 @@ public static class EquipmentCardBuilder
         // ── 连线 EquipmentCardUI 的 SerializedField ──
         var cardSO = new SerializedObject(cardUI);
         cardSO.FindProperty("iconImage").objectReferenceValue        = itemIconImg;
+        cardSO.FindProperty("levelText").objectReferenceValue        = levelText;
         cardSO.FindProperty("nameText").objectReferenceValue         = nameText;
         cardSO.FindProperty("slotText").objectReferenceValue         = slotText;
         cardSO.FindProperty("statsContainer").objectReferenceValue   = statsContainer.transform;

@@ -15,6 +15,7 @@ public class EquipmentCompareUI : MonoBehaviour
 
     [Header("当前装备")]
     [SerializeField] Image oldIconImage;
+    [SerializeField] TMP_Text oldLevelText;
     [SerializeField] TMP_Text oldNameText;
     [SerializeField] TMP_Text oldSlotText;
     [SerializeField] TMP_Text oldDescText;
@@ -22,6 +23,7 @@ public class EquipmentCompareUI : MonoBehaviour
 
     [Header("新装备")]
     [SerializeField] Image newIconImage;
+    [SerializeField] TMP_Text newLevelText;
     [SerializeField] TMP_Text newNameText;
     [SerializeField] TMP_Text newSlotText;
     [SerializeField] TMP_Text newDescText;
@@ -52,6 +54,9 @@ public class EquipmentCompareUI : MonoBehaviour
         decomposeButton?.onClick.AddListener(OnDecompose);
         closeButton?.onClick.AddListener(OnClose);
         gameObject.SetActive(false);
+
+        oldLevelText = EnsureLevelText(transform.Find("ContentRow/Card_当前装备"), oldLevelText, chineseFontAsset);
+        newLevelText = EnsureLevelText(transform.Find("ContentRow/Card_新装备"), newLevelText, chineseFontAsset);
     }
 
     public void Show(EquipmentResult newItem, EquipmentResult oldItem)
@@ -61,6 +66,8 @@ public class EquipmentCompareUI : MonoBehaviour
         closeButton?.gameObject.SetActive(false);
         _cg.alpha = 0f;
         gameObject.SetActive(true);
+        oldLevelText = EnsureLevelText(transform.Find("ContentRow/Card_当前装备"), oldLevelText, chineseFontAsset);
+        newLevelText = EnsureLevelText(transform.Find("ContentRow/Card_新装备"), newLevelText, chineseFontAsset);
         PopulateOld(oldItem);
         PopulateNew(newItem, oldItem);
         ApplyFontToAllText();
@@ -83,6 +90,8 @@ public class EquipmentCompareUI : MonoBehaviour
     {
         oldIconImage.sprite = old.icon;
         oldIconImage.enabled = old.icon != null;
+        if (oldLevelText != null)
+            oldLevelText.text = FormatLevel(old.equipLevel);
         oldNameText.text = old.itemName;
         oldSlotText.text = "槽位：" + old.slotName;
         if (oldDescText != null)
@@ -97,6 +106,8 @@ public class EquipmentCompareUI : MonoBehaviour
     {
         newIconImage.sprite = newItem.icon;
         newIconImage.enabled = newItem.icon != null;
+        if (newLevelText != null)
+            newLevelText.text = FormatLevel(newItem.equipLevel);
         newNameText.text = newItem.itemName;
         newSlotText.text = "槽位：" + newItem.slotName;
         if (newDescText != null)
@@ -256,6 +267,46 @@ public class EquipmentCompareUI : MonoBehaviour
     {
         int r = Mathf.Clamp(rarity, 1, 6);
         return new string('★', r) + new string('☆', 6 - r);
+    }
+
+    static string FormatLevel(int level)
+    {
+        return $"Lv.{Mathf.Max(1, level)}";
+    }
+
+    static TMP_Text EnsureLevelText(Transform cardRoot, TMP_Text existing, TMP_FontAsset font)
+    {
+        if (existing != null) return existing;
+        if (cardRoot == null) return null;
+
+        Transform iconSlot = cardRoot.Find("TopRow/IconSlot");
+        if (iconSlot == null) return null;
+
+        Transform found = iconSlot.Find("LevelText");
+        var text = found != null ? found.GetComponent<TMP_Text>() : null;
+        if (text == null)
+        {
+            var go = new GameObject("LevelText");
+            go.transform.SetParent(iconSlot, false);
+
+            var rt = go.AddComponent<RectTransform>();
+            rt.anchorMin = new Vector2(0f, 0f);
+            rt.anchorMax = new Vector2(1f, 0f);
+            rt.pivot = new Vector2(0.5f, 0f);
+            rt.anchoredPosition = new Vector2(0f, 4f);
+            rt.sizeDelta = new Vector2(0f, 18f);
+
+            text = go.AddComponent<TextMeshProUGUI>();
+            text.text = "Lv.1";
+            text.fontSize = 13f;
+            text.fontStyle = FontStyles.Bold;
+            text.alignment = TextAlignmentOptions.Center;
+            text.color = new Color(0.22f, 0.10f, 0.02f);
+        }
+
+        if (font != null) text.font = font;
+        text.transform.SetAsLastSibling();
+        return text;
     }
 
     readonly struct StatEntry

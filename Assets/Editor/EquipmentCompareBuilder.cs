@@ -92,6 +92,8 @@ public static class EquipmentCompareBuilder
 
         var oldCard = DuplicateCard(srcCardUI.gameObject, "Card_当前装备", contentRow.transform);
         var newCard = DuplicateCard(srcCardUI.gameObject, "Card_新装备",   contentRow.transform);
+        var oldLevelText = EnsureLevelText(oldCard, font);
+        var newLevelText = EnsureLevelText(newCard, font);
 
         // ── 按钮行 ────────────────────────────────────────────────
         var btnRow = MakeUIGO("ButtonRow", root.transform);
@@ -113,11 +115,13 @@ public static class EquipmentCompareBuilder
         // ── 连线 EquipmentCompareUI ───────────────────────────────
         var so = new SerializedObject(compareUI);
         so.FindProperty("oldIconImage").objectReferenceValue      = Find<Image>(oldCard,    "TopRow/IconSlot/ItemIcon");
+        so.FindProperty("oldLevelText").objectReferenceValue      = oldLevelText;
         so.FindProperty("oldNameText").objectReferenceValue       = Find<TMP_Text>(oldCard, "TopRow/InfoGroup/NameText");
         so.FindProperty("oldSlotText").objectReferenceValue       = Find<TMP_Text>(oldCard, "TopRow/InfoGroup/SlotText");
         so.FindProperty("oldDescText").objectReferenceValue       = Find<TMP_Text>(oldCard, "BottomPanel/DescriptionText");
         so.FindProperty("oldStatsContainer").objectReferenceValue = oldCard.transform.Find("BottomPanel/StatsContainer");
         so.FindProperty("newIconImage").objectReferenceValue      = Find<Image>(newCard,    "TopRow/IconSlot/ItemIcon");
+        so.FindProperty("newLevelText").objectReferenceValue      = newLevelText;
         so.FindProperty("newNameText").objectReferenceValue       = Find<TMP_Text>(newCard, "TopRow/InfoGroup/NameText");
         so.FindProperty("newSlotText").objectReferenceValue       = Find<TMP_Text>(newCard, "TopRow/InfoGroup/SlotText");
         so.FindProperty("newDescText").objectReferenceValue       = Find<TMP_Text>(newCard, "BottomPanel/DescriptionText");
@@ -167,6 +171,42 @@ public static class EquipmentCompareBuilder
         var t = root.transform.Find(path);
         if (t == null) { Debug.LogWarning($"[CompareBuilder] 找不到路径 {root.name}/{path}"); return null; }
         return t.GetComponent<T>();
+    }
+
+    static TMP_Text EnsureLevelText(GameObject card, TMP_FontAsset font)
+    {
+        var iconSlot = card.transform.Find("TopRow/IconSlot");
+        if (iconSlot == null)
+        {
+            Debug.LogWarning($"[CompareBuilder] 找不到路径 {card.name}/TopRow/IconSlot");
+            return null;
+        }
+
+        var existing = iconSlot.Find("LevelText");
+        var text = existing != null ? existing.GetComponent<TMP_Text>() : null;
+        if (text != null)
+        {
+            if (font != null) text.font = font;
+            text.transform.SetAsLastSibling();
+            return text;
+        }
+
+        var go = MakeUIGO("LevelText", iconSlot);
+        var rt = go.GetComponent<RectTransform>();
+        rt.anchorMin = new Vector2(0f, 0f);
+        rt.anchorMax = new Vector2(1f, 0f);
+        rt.pivot = new Vector2(0.5f, 0f);
+        rt.anchoredPosition = new Vector2(0f, 4f);
+        rt.sizeDelta = new Vector2(0f, 18f);
+
+        text = go.AddComponent<TextMeshProUGUI>();
+        text.text = "Lv.1";
+        text.fontSize = 13f;
+        text.fontStyle = FontStyles.Bold;
+        text.alignment = TextAlignmentOptions.Center;
+        text.color = new Color(0.22f, 0.10f, 0.02f);
+        if (font != null) text.font = font;
+        return text;
     }
 
     static void MakeLabel(string goName, Transform parent, string text, Color color,

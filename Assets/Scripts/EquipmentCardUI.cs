@@ -8,6 +8,7 @@ public class EquipmentCardUI : MonoBehaviour
 
     [Header("Top Row")]
     [SerializeField] Image iconImage;
+    [SerializeField] TMP_Text levelText;
     [SerializeField] TMP_Text nameText;
     [SerializeField] TMP_Text slotText;
 
@@ -46,6 +47,8 @@ public class EquipmentCardUI : MonoBehaviour
 
         if (chineseFontAsset == null)
             EnsureRuntimeFont();
+
+        levelText = EnsureLevelText(transform, levelText, chineseFontAsset);
     }
 
     void Update()
@@ -108,6 +111,7 @@ public class EquipmentCardUI : MonoBehaviour
         _currentItem = data;
         _canvasGroup.alpha = 0f;
         gameObject.SetActive(true);
+        levelText = EnsureLevelText(transform, levelText, chineseFontAsset);
         Populate(data);
         ApplyFontToAllText();
         StopAllCoroutines();
@@ -118,6 +122,8 @@ public class EquipmentCardUI : MonoBehaviour
     {
         iconImage.sprite = data.icon;
         iconImage.enabled = data.icon != null;
+        if (levelText != null)
+            levelText.text = FormatLevel(data.equipLevel);
         nameText.text = data.itemName;
         slotText.text = "槽位：" + data.slotName;
         if (descriptionText != null)
@@ -231,6 +237,45 @@ public class EquipmentCardUI : MonoBehaviour
     {
         int r = Mathf.Clamp(rarity, 1, 6);
         return new string('★', r) + new string('☆', 6 - r);
+    }
+
+    static string FormatLevel(int level)
+    {
+        return $"Lv.{Mathf.Max(1, level)}";
+    }
+
+    static TMP_Text EnsureLevelText(Transform cardRoot, TMP_Text existing, TMP_FontAsset font)
+    {
+        if (existing != null) return existing;
+
+        Transform iconSlot = cardRoot.Find("TopRow/IconSlot");
+        if (iconSlot == null) return null;
+
+        Transform found = iconSlot.Find("LevelText");
+        var text = found != null ? found.GetComponent<TMP_Text>() : null;
+        if (text == null)
+        {
+            var go = new GameObject("LevelText");
+            go.transform.SetParent(iconSlot, false);
+
+            var rt = go.AddComponent<RectTransform>();
+            rt.anchorMin = new Vector2(0f, 0f);
+            rt.anchorMax = new Vector2(1f, 0f);
+            rt.pivot = new Vector2(0.5f, 0f);
+            rt.anchoredPosition = new Vector2(0f, 4f);
+            rt.sizeDelta = new Vector2(0f, 18f);
+
+            text = go.AddComponent<TextMeshProUGUI>();
+            text.text = "Lv.1";
+            text.fontSize = 13f;
+            text.fontStyle = FontStyles.Bold;
+            text.alignment = TextAlignmentOptions.Center;
+            text.color = new Color(0.22f, 0.10f, 0.02f);
+        }
+
+        if (font != null) text.font = font;
+        text.transform.SetAsLastSibling();
+        return text;
     }
 
     readonly struct StatEntry

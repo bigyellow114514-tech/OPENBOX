@@ -269,16 +269,12 @@ Slot: 0 - 11
 每件装备包含：
 
 - `4` 条基础属性，分别是攻击力、防御力、生命值、敏捷。
-- 等级大于10，且品质大于2的装备，额外带`1` 条战斗属性。（参数见GlobalConfig表）
-- 等级大于15，品质大于3的装备，额外带`1` 条战斗抗性。（参数见GlobalConfig表）
-- 战斗属性和战斗抗性生成规则：
-    1、先随机属性类型，4种属性等权重随机
-    2、随机属性值，这里需要读表：先读Equipment获得该等级的基础属性。
-    3、然后读GlobalConfig表中的EuipmentAttrRandomRange字段，该值是给这个属性随机浮动上下X%。
-    4、然后根据品质和部位，读EquipmentRarityRatio和EquipmentSlotRatio表确定属性的系数，得到最终属性值。
-    5、装备基础属性需要取整。战斗属性和战斗抗性保留一位小数（如：2.5%）
+- 等级大于 `BattleAttrLevelLimit`，且品质大于 `BattleAttrRareLimit` 的装备，额外带 `1` 条战斗属性。阈值读取 `GlobalConfig.xlsx`。
+- 等级大于 `AntiBattleAttrLevelLimit`，且品质大于 `AntiBattleAttrRareLimit` 的装备，额外带 `1` 条战斗抗性。阈值读取 `GlobalConfig.xlsx`。
+- 战斗属性从战斗属性池中等权重随机 `1` 条；战斗抗性从抗性属性池中等权重随机 `1` 条。
+- 所有装备属性都使用 5.6 的公式计算。基础属性最终取整；战斗属性和战斗抗性保留 `1` 位小数，显示为百分比，例如 `2.5%`。
 
-> [待讨论] 副属性池、词条权重、词条数值区间需要补表。
+
 
 ### 5.5 箱子掉落逻辑
 
@@ -311,7 +307,8 @@ flowchart TD
 原策划公式：
 
 ```text
-最终装备属性 = 基础值 ×  品质系数 ×  部位系数
+最终装备属性 = 基础值 × 品质系数 × 部位系数 × 随机浮动系数
+随机浮动系数 = Random(1 - x%, 1 + x%)
 ```
 
 数据来源：
@@ -321,8 +318,14 @@ flowchart TD
 | 基础属性 | `Equipment.xlsx / EquipmentLevel` | 根据装备等级读取 |
 | 品质系数 | `Equipment.xlsx / EquipmentRarityRatio` | 根据装备品质读取 |
 | 部位系数 | `Equipment.xlsx / EquipmentSlotRatio` | 根据装备部位读取 |
+| 浮动范围 | `EquipmentAttrRandom.xlsx` | 根据装备等级读取，每个属性有各自的浮动范围 |
 
-> [待讨论] 最终属性是否取整？向上取整、向下取整还是四舍五入？
+`EquipmentAttrRandom.xlsx` 中的浮动范围填写百分比数值。比如 `AttackRandomRange = 10` 表示攻击最终值在 `-10%` 到 `+10%` 之间随机浮动。
+
+计算后的数值规则：
+
+- 基础属性：攻击力、防御力、生命值、敏捷，最终值取整。
+- 战斗属性和战斗抗性：最终值保留 `1` 位小数，显示为百分比，例如 `2.5%`。
 
 ---
 

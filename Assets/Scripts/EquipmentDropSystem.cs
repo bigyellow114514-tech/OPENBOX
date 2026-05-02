@@ -25,6 +25,7 @@ public class EquipmentDropSystem : MonoBehaviour
     readonly List<RoleAttr> _levelAttrs = new();
     readonly List<RoleAttr> _rarityRatios = new();
     readonly List<RoleAttr> _slotRatios = new();
+    readonly List<RoleAttr> _attrRandomRanges = new();
     readonly Dictionary<string, float> _globalConfig = new();
 
     int _battleAttrLevelLimit = 10;
@@ -60,19 +61,21 @@ public class EquipmentDropSystem : MonoBehaviour
         RoleAttr rarityRatio = GetRatio(_rarityRatios, rarity - 1);
         RoleAttr slotRatio = GetRatio(_slotRatios, slot);
 
+        RoleAttr randomRange = GetRandomRangeAttr(equipLevel);
+
         RoleAttr bonusAttr = new RoleAttr
         {
-            Attack = Mathf.Round(baseAttr.Attack * rarityRatio.Attack * slotRatio.Attack),
-            Defence = Mathf.Round(baseAttr.Defence * rarityRatio.Defence * slotRatio.Defence),
-            Hp = Mathf.Round(baseAttr.Hp * rarityRatio.Hp * slotRatio.Hp),
-            Agility = Mathf.Round(baseAttr.Agility * rarityRatio.Agility * slotRatio.Agility),
+            Attack = CalculateFinalAttr(baseAttr, rarityRatio, slotRatio, randomRange, "Attack", true),
+            Defence = CalculateFinalAttr(baseAttr, rarityRatio, slotRatio, randomRange, "Defence", true),
+            Hp = CalculateFinalAttr(baseAttr, rarityRatio, slotRatio, randomRange, "Hp", true),
+            Agility = CalculateFinalAttr(baseAttr, rarityRatio, slotRatio, randomRange, "Agility", true),
         };
 
         if (equipLevel > _battleAttrLevelLimit && rarity > _battleAttrRareLimit)
-            AddRandomExtraAttr(ref bonusAttr, baseAttr, rarityRatio, slotRatio, BattleAttrKeys);
+            AddRandomExtraAttr(ref bonusAttr, baseAttr, rarityRatio, slotRatio, randomRange, BattleAttrKeys);
 
         if (equipLevel > _antiBattleAttrLevelLimit && rarity > _antiBattleAttrRareLimit)
-            AddRandomExtraAttr(ref bonusAttr, baseAttr, rarityRatio, slotRatio, AntiBattleAttrKeys);
+            AddRandomExtraAttr(ref bonusAttr, baseAttr, rarityRatio, slotRatio, randomRange, AntiBattleAttrKeys);
 
         return new EquipmentResult
         {
@@ -88,14 +91,12 @@ public class EquipmentDropSystem : MonoBehaviour
 
     public Sprite GetIconForLevel(int level) => GetIcon(level);
 
-    void AddRandomExtraAttr(ref RoleAttr attr, RoleAttr baseAttr, RoleAttr rarityRatio, RoleAttr slotRatio, string[] keys)
+    void AddRandomExtraAttr(ref RoleAttr attr, RoleAttr baseAttr, RoleAttr rarityRatio, RoleAttr slotRatio, RoleAttr randomRange, string[] keys)
     {
         if (keys == null || keys.Length == 0) return;
 
         string key = keys[Random.Range(0, keys.Length)];
-        float randomFactor = Random.Range(1f - _attrRandomRange, 1f + _attrRandomRange);
-        float value = GetAttrValue(baseAttr, key) * randomFactor * GetAttrValue(rarityRatio, key) * GetAttrValue(slotRatio, key);
-        attr.SetByKey(key, Mathf.Round(value * 10f) / 10f);
+        attr.SetByKey(key, CalculateFinalAttr(baseAttr, rarityRatio, slotRatio, randomRange, key, false));
     }
 
     void LoadTables()
@@ -106,18 +107,21 @@ public class EquipmentDropSystem : MonoBehaviour
         _levelAttrs.Clear();
         _rarityRatios.Clear();
         _slotRatios.Clear();
+        _attrRandomRanges.Clear();
         _globalConfig.Clear();
 
         LoadAttrRows(Path.Combine(Application.dataPath, "Excel/Equipment.xlsx"), "Level", _levelAttrs);
         LoadAttrRows(Path.Combine(Application.dataPath, "Excel/EquipmentRarityRatio.xlsx"), "Rarity", _rarityRatios);
         LoadAttrRows(Path.Combine(Application.dataPath, "Excel/EquipmentSlotRatio.xlsx"), "Slot", _slotRatios);
+        LoadAttrRandomRows(Path.Combine(Application.dataPath, "Excel/EquipmentAttrRandom.xlsx"), _attrRandomRanges);
         LoadGlobalConfig(Path.Combine(Application.dataPath, "Excel/GlobalConfig.xlsx"));
 
         _battleAttrLevelLimit = Mathf.RoundToInt(GetConfig("BattleAttrLevelLimit", _battleAttrLevelLimit));
         _battleAttrRareLimit = Mathf.RoundToInt(GetConfig("BattleAttrRareLimit", _battleAttrRareLimit));
         _antiBattleAttrLevelLimit = Mathf.RoundToInt(GetConfig("AntiBattleAttrLevelLimit", _antiBattleAttrLevelLimit));
         _antiBattleAttrRareLimit = Mathf.RoundToInt(GetConfig("AntiBattleAttrRareLimit", _antiBattleAttrRareLimit));
-        _attrRandomRange = Mathf.Max(0f, GetConfig("EuipmentAttrRandomRange", _attrRandomRange));
+        float fallbackRandomRange = GetConfig("EuipmentAttrRandomRange", _attrRandomRange);
+        _attrRandomRange = Mathf.Max(0f, GetConfig("EquipmentAttrRandomRange", fallbackRandomRange));
     }
 
     static void LoadAttrRows(string path, string idColumn, List<RoleAttr> target)
@@ -170,6 +174,14 @@ public class EquipmentDropSystem : MonoBehaviour
         return _levelAttrs[Mathf.Clamp(level - 1, 0, _levelAttrs.Count - 1)];
     }
 
+    RoleAttr GetRandomRangeAttr(int level)
+    {
+        if (_attrRandomRanges.Count == 0)
+            return CreateUniformRandomRange(_attrRandomRange);
+
+        return _attrRandomRanges[Mathf.Clamp(level - 1, 0, _attrRandomRanges.Count - 1)];
+    }
+
     static RoleAttr GetRatio(List<RoleAttr> ratios, int index)
     {
         if (ratios.Count == 0)
@@ -204,6 +216,85 @@ public class EquipmentDropSystem : MonoBehaviour
             AntiStunRate = row.GetFloat(columns, "AntiStunRate"),
             AntiLifeStealRate = row.GetFloat(columns, "AntiLifeStealRate"),
         };
+    }
+
+    static void LoadAttrRandomRows(string path, List<RoleAttr> target)
+    {
+        if (!File.Exists(path))
+        {
+            Debug.LogWarning($"[EquipmentDropSystem] Missing EquipmentAttrRandom table: {path}");
+            return;
+        }
+
+        var table = ExcelTable.Load(path);
+        var columns = table.ReadHeader(2);
+        for (int i = 3; i < table.Rows.Count; i++)
+        {
+            ExcelRow row = table.Rows[i];
+            if (row.GetInt(columns, "Level", -1) < 0) continue;
+            target.Add(ReadAttrRandomRange(row, columns));
+        }
+    }
+
+    static RoleAttr ReadAttrRandomRange(ExcelRow row, Dictionary<string, int> columns)
+    {
+        return new RoleAttr
+        {
+            Attack = NormalizeRandomRange(row.GetFloat(columns, "AttackRandomRange")),
+            Defence = NormalizeRandomRange(row.GetFloat(columns, "DefenceRandomRange")),
+            Hp = NormalizeRandomRange(row.GetFloat(columns, "HpRandomRange")),
+            Agility = NormalizeRandomRange(row.GetFloat(columns, "AgilityRandomRange")),
+            CritRate = NormalizeRandomRange(row.GetFloat(columns, "CritRateRandomRange")),
+            CounterRate = NormalizeRandomRange(row.GetFloat(columns, "CounterRateRandomRange")),
+            ComboRate = NormalizeRandomRange(row.GetFloat(columns, "ComboRateRandomRange")),
+            DodgeRate = NormalizeRandomRange(row.GetFloat(columns, "DodgeRateRandomRange")),
+            StunRate = NormalizeRandomRange(row.GetFloat(columns, "StunRateRandomRange")),
+            LifeStealRate = NormalizeRandomRange(row.GetFloat(columns, "LifeStealRateRandomRange")),
+            AntiCritRate = NormalizeRandomRange(row.GetFloat(columns, "AntiCritRateRandomRange")),
+            AntiCounterRate = NormalizeRandomRange(row.GetFloat(columns, "AntiCounterRateRandomRange")),
+            AntiComboRate = NormalizeRandomRange(row.GetFloat(columns, "AntiComboRateRandomRange")),
+            AntiDodgeRate = NormalizeRandomRange(row.GetFloat(columns, "AntiDodgeRateRandomRange")),
+            AntiStunRate = NormalizeRandomRange(row.GetFloat(columns, "AntiStunRateRandomRange")),
+            AntiLifeStealRate = NormalizeRandomRange(row.GetFloat(columns, "AntiLifeStealRateRandomRange")),
+        };
+    }
+
+    static RoleAttr CreateUniformRandomRange(float range)
+    {
+        range = NormalizeRandomRange(range);
+        return new RoleAttr
+        {
+            Attack = range,
+            Defence = range,
+            Hp = range,
+            Agility = range,
+            CritRate = range,
+            CounterRate = range,
+            ComboRate = range,
+            DodgeRate = range,
+            StunRate = range,
+            LifeStealRate = range,
+            AntiCritRate = range,
+            AntiCounterRate = range,
+            AntiComboRate = range,
+            AntiDodgeRate = range,
+            AntiStunRate = range,
+            AntiLifeStealRate = range,
+        };
+    }
+
+    static float CalculateFinalAttr(RoleAttr baseAttr, RoleAttr rarityRatio, RoleAttr slotRatio, RoleAttr randomRange, string key, bool roundToInt)
+    {
+        float range = GetAttrValue(randomRange, key);
+        float randomFactor = Random.Range(1f - range, 1f + range);
+        float value = GetAttrValue(baseAttr, key) * GetAttrValue(rarityRatio, key) * GetAttrValue(slotRatio, key) * randomFactor;
+        return roundToInt ? Mathf.Round(value) : Mathf.Round(value * 10f) / 10f;
+    }
+
+    static float NormalizeRandomRange(float value)
+    {
+        value = Mathf.Abs(value);
+        return value > 1f ? value / 100f : value;
     }
 
     static float GetAttrValue(RoleAttr attr, string key)
