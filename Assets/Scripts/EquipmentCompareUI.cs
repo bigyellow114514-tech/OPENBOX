@@ -26,6 +26,7 @@ public class EquipmentCompareUI : MonoBehaviour
     [SerializeField] TMP_Text newLevelText;
     [SerializeField] TMP_Text newNameText;
     [SerializeField] TMP_Text newSlotText;
+    [SerializeField] TMP_Text BattlePowerText;
     [SerializeField] TMP_Text newDescText;
     [SerializeField] Transform newStatsContainer;
 
@@ -57,6 +58,7 @@ public class EquipmentCompareUI : MonoBehaviour
 
         oldLevelText = EnsureLevelText(transform.Find("ContentRow/Card_当前装备"), oldLevelText, chineseFontAsset);
         newLevelText = EnsureLevelText(transform.Find("ContentRow/Card_新装备"), newLevelText, chineseFontAsset);
+        BattlePowerText = EnsureBattlePowerText(BattlePowerText);
     }
 
     public void Show(EquipmentResult newItem, EquipmentResult oldItem)
@@ -68,6 +70,7 @@ public class EquipmentCompareUI : MonoBehaviour
         gameObject.SetActive(true);
         oldLevelText = EnsureLevelText(transform.Find("ContentRow/Card_当前装备"), oldLevelText, chineseFontAsset);
         newLevelText = EnsureLevelText(transform.Find("ContentRow/Card_新装备"), newLevelText, chineseFontAsset);
+        BattlePowerText = EnsureBattlePowerText(BattlePowerText);
         PopulateOld(oldItem);
         PopulateNew(newItem, oldItem);
         ApplyFontToAllText();
@@ -117,7 +120,35 @@ public class EquipmentCompareUI : MonoBehaviour
         }
 
         RoleAttr delta = newItem.bonusAttr - oldItem.bonusAttr;
+        SetBattlePowerText(CalculateReplacementCombatPowerDelta(newItem, oldItem));
         BuildStatRows(newStatsContainer, newItem.bonusAttr, delta);
+    }
+
+    int CalculateReplacementCombatPowerDelta(EquipmentResult newItem, EquipmentResult oldItem)
+    {
+        PlayerCharacter chr = PlayerCharacter.Instance;
+        if (chr == null || newItem == null || oldItem == null) return 0;
+
+        RoleAttr beforeAttr = chr.FinalAttr;
+        RoleAttr afterAttr = beforeAttr - oldItem.bonusAttr + newItem.bonusAttr;
+        return PlayerCharacter.CalculateCombatPower(afterAttr) - PlayerCharacter.CalculateCombatPower(beforeAttr);
+    }
+
+    void SetBattlePowerText(int delta)
+    {
+        if (BattlePowerText == null) return;
+
+        string sign = delta > 0 ? "+ " : delta < 0 ? "- " : "";
+        BattlePowerText.text = "战斗力：" + sign + Mathf.Abs(delta).ToString("0");
+        BattlePowerText.color = delta > 0
+            ? new Color(1.00f, 0.55f, 0.00f)
+            : delta < 0
+                ? new Color(0.12f, 0.39f, 0.86f)
+                : new Color(0.45f, 0.28f, 0.10f);
+
+        ApplyChineseFont(BattlePowerText);
+        BattlePowerText.enableWordWrapping = false;
+        BattlePowerText.overflowMode = TextOverflowModes.Overflow;
     }
 
     void BuildStatRows(Transform container, RoleAttr attr, RoleAttr? delta)
@@ -228,6 +259,14 @@ public class EquipmentCompareUI : MonoBehaviour
 
     void ApplyFontToAllText()
     {
+        foreach (var tmp in GetComponentsInChildren<TMP_Text>(true))
+            ApplyChineseFont(tmp);
+    }
+
+    void ApplyChineseFont(TMP_Text text)
+    {
+        if (text == null) return;
+
         TMP_FontAsset font = chineseFontAsset != null ? chineseFontAsset : _runtimeFont;
         if (font == null)
         {
@@ -235,9 +274,8 @@ public class EquipmentCompareUI : MonoBehaviour
             font = _runtimeFont;
         }
 
-        if (font == null) return;
-        foreach (var tmp in GetComponentsInChildren<TMP_Text>(true))
-            tmp.font = font;
+        if (font != null)
+            text.font = font;
     }
 
     static void EnsureRuntimeFont()
@@ -307,6 +345,19 @@ public class EquipmentCompareUI : MonoBehaviour
         if (font != null) text.font = font;
         text.transform.SetAsLastSibling();
         return text;
+    }
+
+    TMP_Text EnsureBattlePowerText(TMP_Text existing)
+    {
+        if (existing != null) return existing;
+
+        foreach (var text in GetComponentsInChildren<TMP_Text>(true))
+        {
+            if (text.name == "BattlePowerText")
+                return text;
+        }
+
+        return null;
     }
 
     readonly struct StatEntry

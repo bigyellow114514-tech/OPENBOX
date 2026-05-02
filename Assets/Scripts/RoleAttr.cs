@@ -115,4 +115,36 @@ public struct RoleAttr
             case "PetDecrease": PetDecrease = value; break;
         }
     }
+
+    public float GetByKey(string key)
+    {
+        switch (key)
+        {
+            case "Attack": return Attack;
+            case "Defence": return Defence;
+            case "Hp": return Hp;
+            case "Agility": return Agility;
+            case "CritRate": return CritRate;
+            case "CounterRate": return CounterRate;
+            case "ComboRate": return ComboRate;
+            case "DodgeRate": return DodgeRate;
+            case "StunRate": return StunRate;
+            case "LifeStealRate": return LifeStealRate;
+            case "AntiCritRate": return AntiCritRate;
+            case "AntiCounterRate": return AntiCounterRate;
+            case "AntiComboRate": return AntiComboRate;
+            case "AntiDodgeRate": return AntiDodgeRate;
+            case "AntiStunRate": return AntiStunRate;
+            case "AntiLifeStealRate": return AntiLifeStealRate;
+            case "CritDmg": return CritDmg;
+            case "AntiCritDmg": return AntiCritDmg;
+            case "DamageIncrease": return DamageIncrease;
+            case "DamageDecrease": return DamageDecrease;
+            case "Healing": return Healing;
+            case "AntiHealing": return AntiHealing;
+            case "PetIncrease": return PetIncrease;
+            case "PetDecrease": return PetDecrease;
+            default: return 0f;
+        }
+    }
 }

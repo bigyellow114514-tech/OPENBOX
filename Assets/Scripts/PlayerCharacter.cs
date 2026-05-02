@@ -7,8 +7,9 @@ public class PlayerCharacter : MonoBehaviour
 
     const string RoleAttrXlsxRelativePath = "Excel/RoleAttr.xlsx";
 
-    static bool _baseAttrLoaded;
+    static bool _roleAttrLoaded;
     static RoleAttr _baseAttr;
+    static RoleAttr _combatPowerPerUnit;
 
     RoleAttr _equipAttr;
 
@@ -16,6 +17,7 @@ public class PlayerCharacter : MonoBehaviour
     public RoleAttr BaseAttr => GetBaseAttr();
     public RoleAttr EquipAttr => _equipAttr;
     public RoleAttr FinalAttr => GetBaseAttr() + _equipAttr;
+    public int CombatPower => CalculateCombatPower(FinalAttr);
 
     public event System.Action OnAttrChanged;
 
@@ -46,25 +48,44 @@ public class PlayerCharacter : MonoBehaviour
 
     static RoleAttr GetBaseAttr()
     {
-        if (_baseAttrLoaded) return _baseAttr;
+        LoadRoleAttrTable();
+        return _baseAttr;
+    }
 
-        _baseAttrLoaded = true;
+    public static int CalculateCombatPower(RoleAttr attr)
+    {
+        LoadRoleAttrTable();
+
+        float total = 0f;
+        foreach (string key in RoleAttrKeys)
+            total += attr.GetByKey(key) * _combatPowerPerUnit.GetByKey(key);
+
+        return Mathf.Max(0, Mathf.RoundToInt(total));
+    }
+
+    static void LoadRoleAttrTable()
+    {
+        if (_roleAttrLoaded) return;
+
+        _roleAttrLoaded = true;
         _baseAttr = DefaultBaseAttr();
+        _combatPowerPerUnit = default;
 
         string path = Path.Combine(Application.dataPath, RoleAttrXlsxRelativePath);
         if (!File.Exists(path))
         {
             Debug.LogWarning("[PlayerCharacter] RoleAttr.xlsx not found, using fallback base attributes: " + path);
-            return _baseAttr;
+            return;
         }
 
         try
         {
             ExcelTable table = ExcelTable.Load(path);
-            if (table.Rows.Count < 4) return _baseAttr;
+            if (table.Rows.Count < 4) return;
 
             var columns = table.ReadHeader(2);
             RoleAttr loaded = _baseAttr;
+            RoleAttr loadedCombatPower = _combatPowerPerUnit;
 
             for (int i = 3; i < table.Rows.Count; i++)
             {
@@ -73,16 +94,16 @@ public class PlayerCharacter : MonoBehaviour
                 if (string.IsNullOrEmpty(key)) continue;
 
                 loaded.SetByKey(key, row.GetFloat(columns, "InitValue"));
+                loadedCombatPower.SetByKey(key, row.GetFloat(columns, "CombatPower"));
             }
 
             _baseAttr = loaded;
+            _combatPowerPerUnit = loadedCombatPower;
         }
         catch (System.Exception e)
         {
             Debug.LogError("[PlayerCharacter] Failed to read RoleAttr.xlsx, using fallback base attributes: " + e.Message);
         }
-
-        return _baseAttr;
     }
 
     static RoleAttr DefaultBaseAttr()
@@ -97,4 +118,32 @@ public class PlayerCharacter : MonoBehaviour
             CritDmg = 100,
         };
     }
+
+    static readonly string[] RoleAttrKeys =
+    {
+        "Attack",
+        "Defence",
+        "Hp",
+        "Agility",
+        "CritRate",
+        "CounterRate",
+        "ComboRate",
+        "DodgeRate",
+        "StunRate",
+        "LifeStealRate",
+        "AntiCritRate",
+        "AntiCounterRate",
+        "AntiComboRate",
+        "AntiDodgeRate",
+        "AntiStunRate",
+        "AntiLifeStealRate",
+        "CritDmg",
+        "AntiCritDmg",
+        "DamageIncrease",
+        "DamageDecrease",
+        "Healing",
+        "AntiHealing",
+        "PetIncrease",
+        "PetDecrease",
+    };
 }

@@ -7,21 +7,33 @@ public class CharacterAttrUI : MonoBehaviour
     Texture2D _bgTex;
     Texture2D _sectionTex;
     Texture2D _buttonTex;
+    Texture2D _powerTex;
     GUIStyle _buttonStyle;
     GUIStyle _titleStyle;
     GUIStyle _sectionTitleStyle;
     GUIStyle _labelStyle;
     GUIStyle _valueStyle;
+    GUIStyle _powerLabelStyle;
+    GUIStyle _powerValueStyle;
 
     void Start()
     {
+        EnsureTextures();
+    }
+
+    void EnsureTextures()
+    {
+        if (_bgTex != null) return;
+
         _bgTex = MakeTex(new Color(0.06f, 0.16f, 0.18f, 0.88f));
         _sectionTex = MakeTex(new Color(0.05f, 0.12f, 0.14f, 0.70f));
         _buttonTex = MakeTex(new Color(0.10f, 0.25f, 0.28f, 0.92f));
+        _powerTex = MakeTex(new Color(0.08f, 0.19f, 0.20f, 0.90f));
     }
 
     void InitStyles()
     {
+        EnsureTextures();
         if (_buttonStyle != null) return;
 
         _buttonStyle = new GUIStyle(GUI.skin.button)
@@ -63,6 +75,22 @@ public class CharacterAttrUI : MonoBehaviour
             alignment = TextAnchor.MiddleLeft,
             normal = { textColor = new Color(0.96f, 0.90f, 0.58f) },
         };
+
+        _powerLabelStyle = new GUIStyle(GUI.skin.label)
+        {
+            fontSize = 14,
+            fontStyle = FontStyle.Bold,
+            alignment = TextAnchor.MiddleLeft,
+            normal = { textColor = new Color(0.78f, 0.84f, 0.82f) },
+        };
+
+        _powerValueStyle = new GUIStyle(GUI.skin.label)
+        {
+            fontSize = 16,
+            fontStyle = FontStyle.Bold,
+            alignment = TextAnchor.MiddleRight,
+            normal = { textColor = new Color(1.00f, 0.82f, 0.35f) },
+        };
     }
 
     void OnGUI()
@@ -80,16 +108,19 @@ public class CharacterAttrUI : MonoBehaviour
             PlayerResourceManager.Instance?.ResetToDefault();
         }
 
+        PlayerCharacter chr = PlayerCharacter.Instance;
+        if (chr != null)
+            DrawCombatPower(new Rect(10f, 44f, 182f, 30f), chr.CombatPower);
+
         if (!_show) return;
 
-        PlayerCharacter chr = PlayerCharacter.Instance;
         PlayerExpManager exp = PlayerExpManager.Instance;
         if (chr == null || exp == null) return;
 
         RoleAttr attr = chr.FinalAttr;
         float panelW = Mathf.Min(430f, Screen.width - 20f);
         float panelX = 10f;
-        float panelY = 48f;
+        float panelY = 82f;
         float pad = 10f;
         float titleH = 30f;
         float sectionGap = 8f;
@@ -143,6 +174,13 @@ public class CharacterAttrUI : MonoBehaviour
             Stat("强化宠物", attr.PetIncrease),
             Stat("弱化宠物", attr.PetDecrease),
         }, 3);
+    }
+
+    void DrawCombatPower(Rect rect, int combatPower)
+    {
+        GUI.DrawTexture(rect, _powerTex);
+        GUI.Label(new Rect(rect.x + 10f, rect.y, 70f, rect.height), "战斗力", _powerLabelStyle);
+        GUI.Label(new Rect(rect.x + 78f, rect.y, rect.width - 88f, rect.height), combatPower.ToString("N0"), _powerValueStyle);
     }
 
     void DrawSection(float x, ref float y, float w, string title, StatItem[] items, int columns)
