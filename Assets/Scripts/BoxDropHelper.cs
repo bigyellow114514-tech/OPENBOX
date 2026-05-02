@@ -98,9 +98,10 @@ public class BoxDropHelper : MonoBehaviour
         var existingItem = EquipmentSlotSystem.Instance?.GetSlot(result.slotIndex);
         if (existingItem != null)
         {
-            if (EquipmentCompareUI.Instance != null)
+            var compareUI = EquipmentCompareUI.GetOrFindInstance();
+            if (compareUI != null)
             {
-                EquipmentCompareUI.Instance.Show(result, existingItem);
+                compareUI.Show(result, existingItem);
                 Destroy(gameObject);
                 yield break;
             }

@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.IO;
 using UnityEngine;
 
 public class EquipmentSlotSystem : MonoBehaviour
@@ -183,11 +185,16 @@ public class EquipmentSlotSystem : MonoBehaviour
             Debug.LogWarning($"[EquipmentSlotSystem] 槽位越界：{item.slotName}（index={index}）");
             return;
         }
+
+        EquipmentResult replacedItem = _slots[index];
         _slots[index] = item;
         Save();
         RefreshPlayerAttr();
         OnSlotChanged?.Invoke(index);
         Debug.Log($"[EquipmentSlotSystem] 装备成功：{item.itemName} → slot {index}（{item.slotName}）");
+
+        if (replacedItem != null && !ReferenceEquals(replacedItem, item))
+            AwardDecomposeReward(replacedItem, "替换自动分解");
     }
 
     /// <summary>分解装备，按等级查表给予大树经验。</summary>
@@ -200,9 +207,7 @@ public class EquipmentSlotSystem : MonoBehaviour
             return;
         }
 
-        int exp = GetDecomposeExp(item.equipLevel);
-        TreeExpManager.Instance?.AddExp(exp);
-        Debug.Log($"[EquipmentSlotSystem] 分解：{item.itemName}，获得 {exp} 树经验");
+        AwardDecomposeReward(item, "分解");
     }
 
     // ── 内部逻辑 ──────────────────────────────────────────────────────
@@ -216,14 +221,123 @@ public class EquipmentSlotSystem : MonoBehaviour
                 PlayerCharacter.Instance.AddEquipAttr(slot.bonusAttr);
     }
 
-    static int GetDecomposeExp(int equipLevel)
+    static void AwardDecomposeReward(EquipmentResult item, string reason)
     {
-        int idx = Mathf.Clamp(equipLevel - 1, 0, DecomposeTable.Length - 1);
-        return DecomposeTable[idx];
+        if (item == null) return;
+
+        SellReward reward = GetDecomposeReward(item.equipLevel);
+        EnsureResourceManager()?.AddGold(reward.gold);
+        EnsurePlayerExpManager()?.AddExp(reward.exp);
+        Debug.Log($"[EquipmentSlotSystem] {reason}：{item.itemName}，获得金币 {reward.gold}，经验 {reward.exp}");
     }
 
+    static SellReward GetDecomposeReward(int equipLevel)
+    {
+        EnsureSellRewardsLoaded();
+        if (_sellRewards.TryGetValue(equipLevel, out SellReward reward))
+            return reward;
+
+        int idx = Mathf.Clamp(equipLevel - 1, 0, FallbackExpTable.Length - 1);
+        return new SellReward(0, FallbackExpTable[idx]);
+    }
+
+    static void EnsureSellRewardsLoaded()
+    {
+        if (_sellRewardsLoaded) return;
+        _sellRewardsLoaded = true;
+
+        string path = FindSellEquipmentPath();
+        if (string.IsNullOrEmpty(path))
+        {
+            Debug.LogWarning("[EquipmentSlotSystem] 找不到 SellEquipment.xlsx，分解奖励将使用旧经验兜底且金币为 0");
+            return;
+        }
+
+        try
+        {
+            var table = ExcelTable.Load(path);
+            var columns = table.ReadHeader(2);
+            for (int i = 3; i < table.Rows.Count; i++)
+            {
+                ExcelRow row = table.Rows[i];
+                int level = FirstInt(row, columns, 0, "EquipmentLevel", "Level");
+                if (level <= 0) continue;
+
+                int gold = FirstInt(row, columns, 0, "GoldReward", "Gold", "CoinReward", "Coins");
+                int exp = FirstInt(row, columns, 0, "ExpReward", "Exp", "ExperienceReward", "PlayerExp");
+                _sellRewards[level] = new SellReward(gold, exp);
+            }
+        }
+        catch (Exception ex)
+        {
+            _sellRewardsLoaded = false;
+            _sellRewards.Clear();
+            Debug.LogWarning($"[EquipmentSlotSystem] 读取分解奖励表失败：{path}，将使用旧经验兜底且金币为 0。{ex.Message}");
+        }
+    }
+
+    static string FindSellEquipmentPath()
+    {
+        string dir = Path.Combine(Application.dataPath, "Excel");
+        string normal = Path.Combine(dir, "SellEquipment.xlsx");
+        if (File.Exists(normal)) return normal;
+
+        string legacyTypo = Path.Combine(dir, "SellEuipment.xlsx");
+        if (File.Exists(legacyTypo)) return legacyTypo;
+
+        return null;
+    }
+
+    static int FirstInt(ExcelRow row, Dictionary<string, int> columns, int defaultValue, params string[] keys)
+    {
+        foreach (string key in keys)
+        {
+            foreach (var column in columns)
+            {
+                if (!string.Equals(column.Key, key, StringComparison.OrdinalIgnoreCase)) continue;
+                return Mathf.RoundToInt(row.GetFloat(columns, column.Key, defaultValue));
+            }
+        }
+        return defaultValue;
+    }
+
+    static PlayerResourceManager EnsureResourceManager()
+    {
+        if (PlayerResourceManager.Instance != null)
+            return PlayerResourceManager.Instance;
+
+        var go = new GameObject("PlayerResourceManager");
+        DontDestroyOnLoad(go);
+        return go.AddComponent<PlayerResourceManager>();
+    }
+
+    static PlayerExpManager EnsurePlayerExpManager()
+    {
+        if (PlayerExpManager.Instance != null)
+            return PlayerExpManager.Instance;
+
+        var go = new GameObject("PlayerExpManager");
+        DontDestroyOnLoad(go);
+        return go.AddComponent<PlayerExpManager>();
+    }
+
+    readonly struct SellReward
+    {
+        public readonly int gold;
+        public readonly int exp;
+
+        public SellReward(int gold, int exp)
+        {
+            this.gold = Mathf.Max(0, gold);
+            this.exp = Mathf.Max(0, exp);
+        }
+    }
+
+    static bool _sellRewardsLoaded;
+    static readonly Dictionary<int, SellReward> _sellRewards = new();
+
     // ── SellEuipment.xlsx（Level 1-36 的 exp 列）────────────────────────
-    static readonly int[] DecomposeTable =
+    static readonly int[] FallbackExpTable =
     {
          5,  5,  5,  5,  5,  // Lv 1-5
          6,  6,  6,  6,  6,  // Lv 6-10

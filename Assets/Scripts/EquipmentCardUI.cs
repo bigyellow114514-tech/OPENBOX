@@ -143,8 +143,11 @@ public class EquipmentCardUI : MonoBehaviour
 
     void AddExtraRows(RoleAttr attr)
     {
-        TryAddFirstExtra(attr, BattleEntries);
-        TryAddFirstExtra(attr, AntiBattleEntries);
+        if (!TryAddFirstExtra(attr, BattleEntries))
+            AddEmptyRow();
+
+        if (!TryAddFirstExtra(attr, AntiBattleEntries))
+            AddEmptyRow();
     }
 
     bool TryAddFirstExtra(RoleAttr attr, StatEntry[] entries)
@@ -163,6 +166,12 @@ public class EquipmentCardUI : MonoBehaviour
     {
         var row = Instantiate(statRowPrefab, statsContainer);
         row.GetComponent<StatRowUI>().Set(label, value, fmt, suffix);
+    }
+
+    void AddEmptyRow()
+    {
+        var row = Instantiate(statRowPrefab, statsContainer);
+        row.GetComponent<StatRowUI>().SetEmpty();
     }
 
     void OnCloseButton()

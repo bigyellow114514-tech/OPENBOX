@@ -31,6 +31,19 @@ public class StatRowUI : MonoBehaviour
         }
     }
 
+    public void SetEmpty()
+    {
+        labelText.margin = Vector4.zero;
+        labelText.text = "";
+        valueText.text = "";
+
+        if (iconImage != null)
+        {
+            iconImage.sprite = null;
+            iconImage.enabled = false;
+        }
+    }
+
     // 带增减对比的显示：在数值后附加彩色 delta 标注
     public void SetWithDelta(string label, float value, float delta,
                              string fmt = "0", string suffix = "")

@@ -18,7 +18,8 @@ public sealed class ExcelTable
 
     public static ExcelTable Load(string path, string worksheetPath = "xl/worksheets/sheet1.xml")
     {
-        using var zip = ZipFile.OpenRead(path);
+        using var file = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+        using var zip = new ZipArchive(file, ZipArchiveMode.Read);
         List<string> sharedStrings = ReadSharedStrings(zip);
 
         var sheetEntry = zip.GetEntry(worksheetPath);

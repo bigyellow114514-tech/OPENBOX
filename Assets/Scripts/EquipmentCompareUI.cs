@@ -6,6 +6,13 @@ public class EquipmentCompareUI : MonoBehaviour
 {
     public static EquipmentCompareUI Instance { get; private set; }
 
+    public static EquipmentCompareUI GetOrFindInstance()
+    {
+        if (Instance != null) return Instance;
+        Instance = FindObjectOfType<EquipmentCompareUI>(true);
+        return Instance;
+    }
+
     [Header("当前装备")]
     [SerializeField] Image oldIconImage;
     [SerializeField] TMP_Text oldNameText;
@@ -51,10 +58,13 @@ public class EquipmentCompareUI : MonoBehaviour
     {
         _newItem = newItem;
         _oldItem = oldItem;
+        closeButton?.gameObject.SetActive(false);
+        _cg.alpha = 0f;
+        gameObject.SetActive(true);
         PopulateOld(oldItem);
         PopulateNew(newItem, oldItem);
         ApplyFontToAllText();
-        gameObject.SetActive(true);
+        RebuildRootLayout();
         StopAllCoroutines();
         StartCoroutine(AnimateFade(0f, 1f));
     }
@@ -101,20 +111,56 @@ public class EquipmentCompareUI : MonoBehaviour
 
     void BuildStatRows(Transform container, RoleAttr attr, RoleAttr? delta)
     {
-        foreach (Transform child in container)
-            Destroy(child.gameObject);
+        ClearStatRows(container);
 
         AddRow(container, "攻击力", attr.Attack, delta?.Attack, "0");
         AddRow(container, "生命值", attr.Hp, delta?.Hp, "0");
         AddRow(container, "防御力", attr.Defence, delta?.Defence, "0");
         AddRow(container, "敏捷", attr.Agility, delta?.Agility, "0");
         AddExtraRows(container, attr, delta);
+        RebuildCardLayout(container);
+    }
+
+    void ClearStatRows(Transform container)
+    {
+        for (int i = container.childCount - 1; i >= 0; i--)
+        {
+            Transform child = container.GetChild(i);
+            child.SetParent(null, false);
+            Destroy(child.gameObject);
+        }
+    }
+
+    void RebuildCardLayout(Transform container)
+    {
+        var rect = container as RectTransform;
+        if (rect == null) return;
+
+        Canvas.ForceUpdateCanvases();
+        LayoutRebuilder.ForceRebuildLayoutImmediate(rect);
+
+        Transform bottomPanel = container.parent;
+        if (bottomPanel is RectTransform bottomRect)
+            LayoutRebuilder.ForceRebuildLayoutImmediate(bottomRect);
+
+        Transform card = bottomPanel != null ? bottomPanel.parent : null;
+        if (card is RectTransform cardRect)
+            LayoutRebuilder.ForceRebuildLayoutImmediate(cardRect);
+    }
+
+    void RebuildRootLayout()
+    {
+        if (transform is RectTransform rootRect)
+            LayoutRebuilder.ForceRebuildLayoutImmediate(rootRect);
     }
 
     void AddExtraRows(Transform container, RoleAttr attr, RoleAttr? delta)
     {
-        TryAddFirstExtra(container, attr, delta, BattleEntries);
-        TryAddFirstExtra(container, attr, delta, AntiBattleEntries);
+        if (!TryAddFirstExtra(container, attr, delta, BattleEntries))
+            AddEmptyRow(container);
+
+        if (!TryAddFirstExtra(container, attr, delta, AntiBattleEntries))
+            AddEmptyRow(container);
     }
 
     bool TryAddFirstExtra(Transform container, RoleAttr attr, RoleAttr? delta, StatEntry[] entries)
@@ -142,10 +188,17 @@ public class EquipmentCompareUI : MonoBehaviour
             ui.Set(label, value, fmt, suffix);
     }
 
+    void AddEmptyRow(Transform container)
+    {
+        var row = Instantiate(statRowPrefab, container);
+        row.GetComponent<StatRowUI>().SetEmpty();
+    }
+
     void OnReplace()
     {
         if (_newItem == null) return;
         EquipmentSlotSystem.Instance?.Equip(_newItem);
+        _newItem = null;
         Hide();
     }
 
@@ -153,10 +206,14 @@ public class EquipmentCompareUI : MonoBehaviour
     {
         if (_newItem == null) return;
         EquipmentSlotSystem.Instance?.Decompose(_newItem);
+        _newItem = null;
         Hide();
     }
 
-    void OnClose() => Hide();
+    void OnClose()
+    {
+        // GDD 5.1: newly opened equipment must be handled immediately.
+    }
 
     void ApplyFontToAllText()
     {

@@ -77,6 +77,7 @@ public class CharacterAttrUI : MonoBehaviour
             PlayerExpManager.Instance?.ResetToDefault();
             EquipmentSlotSystem.Instance?.ResetToDefault();
             PlayerStaminaManager.Instance?.ResetToDefault();
+            PlayerResourceManager.Instance?.ResetToDefault();
         }
 
         if (!_show) return;
