@@ -106,6 +106,7 @@ public class CharacterAttrUI : MonoBehaviour
             EquipmentSlotSystem.Instance?.ResetToDefault();
             PlayerStaminaManager.Instance?.ResetToDefault();
             PlayerResourceManager.Instance?.ResetToDefault();
+            TreeExpManager.Instance?.ResetToDefault();
         }
 
         PlayerCharacter chr = PlayerCharacter.Instance;
