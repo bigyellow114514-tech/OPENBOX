@@ -4674,6 +4674,74 @@ MonoBehaviour:
   m_FlexibleWidth: 0
   m_FlexibleHeight: -1
   m_LayoutPriority: 1
+--- !u!1 &888000001
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 888000002}
+  - component: {fileID: 888000003}
+  m_Layer: 0
+  m_Name: BreezeVFX
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &888000002
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 888000001}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -10.2, y: 0.48, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &888000003
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 888000001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: afd3b6caf6283e64ab443eb3558447f4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  minInterval: 3
+  maxInterval: 8
+  firstDelay: 0.3
+  shapeWidth: 0.1
+  shapeHeight: 12
+  burstMin: 15
+  burstMax: 25
+  rateOverTime: 12
+  duration: 50
+  maxParticles: 200
+  lifetimeMin: 4
+  lifetimeMax: 8
+  speedXMin: 2
+  speedXMax: 6
+  speedYMin: -0.4
+  speedYMax: 0.8
+  sizeMin: 0.18
+  sizeMax: 0.45
+  noiseStrength: 0.25
+  noiseFrequency: 0.4
+  noiseScroll: 0.3
+  gravityModifier: 0.02
+  rotationSpeedMax: 120
+  sortingOrder: 100
 --- !u!1 &888335257
 GameObject:
   m_ObjectHideFlags: 0
@@ -10166,3 +10234,4 @@ SceneRoots:
   - {fileID: 518045540}
   - {fileID: 329761534}
   - {fileID: 901000001}
+  - {fileID: 888000002}
