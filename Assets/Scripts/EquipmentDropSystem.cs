@@ -9,6 +9,7 @@ public class EquipmentDropSystem : MonoBehaviour
     [SerializeField] Sprite[] itemIcons;
     [SerializeField] string[] itemNameTable;
 
+    const int NumSlots = 12;
     const int NumBands = 8;
     static readonly int[] LevelLimits = { 9, 19, 29, 39, 49, 59, 69, 79 };
 
@@ -82,14 +83,14 @@ public class EquipmentDropSystem : MonoBehaviour
             slotIndex = slot,
             itemName = GetItemName(slot, equipLevel),
             slotName = SlotNames[slot],
-            icon = GetIcon(equipLevel),
+            icon = GetIcon(slot, equipLevel),
             rarity = rarity,
             equipLevel = equipLevel,
             bonusAttr = bonusAttr
         };
     }
 
-    public Sprite GetIconForLevel(int level) => GetIcon(level);
+    public Sprite GetIconForLevel(int slot, int level) => GetIcon(slot, level);
 
     void AddRandomExtraAttr(ref RoleAttr attr, RoleAttr baseAttr, RoleAttr rarityRatio, RoleAttr slotRatio, RoleAttr randomRange, string[] keys)
     {
@@ -321,10 +322,11 @@ public class EquipmentDropSystem : MonoBehaviour
         }
     }
 
-    Sprite GetIcon(int playerLevel)
+    Sprite GetIcon(int slot, int playerLevel)
     {
         if (itemIcons == null || itemIcons.Length == 0) return null;
-        int idx = GetLevelBand(playerLevel);
+        int band = GetLevelBand(playerLevel);
+        int idx = slot * NumBands + band;
         return itemIcons[Mathf.Clamp(idx, 0, itemIcons.Length - 1)];
     }
 

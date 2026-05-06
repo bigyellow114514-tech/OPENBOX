@@ -43,6 +43,8 @@ public class EquipmentCompareUI : MonoBehaviour
     CanvasGroup _cg;
     EquipmentResult _newItem;
     EquipmentResult _oldItem;
+    Coroutine _glowCoroutine;
+    Image _glowImage;
 
     static TMP_FontAsset _runtimeFont;
 
@@ -77,6 +79,7 @@ public class EquipmentCompareUI : MonoBehaviour
         RebuildRootLayout();
         StopAllCoroutines();
         StartCoroutine(AnimateFade(0f, 1f));
+        EnableUpgradeGlow(newIconImage, CalculateReplacementCombatPowerDelta(newItem, oldItem) > 0);
     }
 
     public void Hide()
@@ -391,6 +394,49 @@ public class EquipmentCompareUI : MonoBehaviour
         new StatEntry("抗击晕", a => a.AntiStunRate),
         new StatEntry("抗吸血", a => a.AntiLifeStealRate),
     };
+
+    void EnableUpgradeGlow(Image iconImg, bool enable)
+    {
+        if (_glowCoroutine != null) { StopCoroutine(_glowCoroutine); _glowCoroutine = null; }
+        if (_glowImage != null) _glowImage.gameObject.SetActive(false);
+        if (!enable || iconImg == null) return;
+        _glowImage = EnsureGlowImage(iconImg);
+        _glowImage.gameObject.SetActive(true);
+        _glowCoroutine = StartCoroutine(GlowPulse(_glowImage));
+    }
+
+    static Image EnsureGlowImage(Image iconImg)
+    {
+        Transform parent = iconImg.transform.parent;
+        if (parent == null) return null;
+        Transform t = parent.Find("UpgradeGlow");
+        if (t != null) return t.GetComponent<Image>();
+        var go = new GameObject("UpgradeGlow");
+        go.transform.SetParent(parent, false);
+        var iconRt = iconImg.GetComponent<RectTransform>();
+        var rt = go.AddComponent<RectTransform>();
+        rt.anchorMin = iconRt.anchorMin;
+        rt.anchorMax = iconRt.anchorMax;
+        rt.pivot = iconRt.pivot;
+        rt.anchoredPosition = iconRt.anchoredPosition;
+        rt.sizeDelta = iconRt.sizeDelta + new Vector2(10f, 10f);
+        var img = go.AddComponent<Image>();
+        img.color = new Color(1f, 0.78f, 0.2f, 0f);
+        img.raycastTarget = false;
+        go.transform.SetSiblingIndex(iconImg.transform.GetSiblingIndex());
+        return img;
+    }
+
+    System.Collections.IEnumerator GlowPulse(Image glow)
+    {
+        while (true)
+        {
+            float a = 0.3f + 0.4f * Mathf.Abs(Mathf.Sin(Time.time * 2.5f));
+            var c = glow.color;
+            glow.color = new Color(c.r, c.g, c.b, a);
+            yield return null;
+        }
+    }
 
     System.Collections.IEnumerator AnimateFade(float from, float to, System.Action onDone = null)
     {

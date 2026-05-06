@@ -101,7 +101,7 @@ public class EquipmentSlotSystem : MonoBehaviour
         var drop = EquipmentDropSystem.Instance;
         if (drop == null) return;
         foreach (var slot in _slots)
-            if (slot != null) slot.icon = drop.GetIconForLevel(slot.equipLevel);
+            if (slot != null) slot.icon = drop.GetIconForLevel(slot.slotIndex, slot.equipLevel);
     }
 
     void Save()
