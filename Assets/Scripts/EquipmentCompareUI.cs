@@ -43,8 +43,7 @@ public class EquipmentCompareUI : MonoBehaviour
     CanvasGroup _cg;
     EquipmentResult _newItem;
     EquipmentResult _oldItem;
-    Coroutine _glowCoroutine;
-    Image _glowImage;
+    GameObject _vfxInstance;
 
     static TMP_FontAsset _runtimeFont;
 
@@ -85,11 +84,17 @@ public class EquipmentCompareUI : MonoBehaviour
     public void Hide()
     {
         StopAllCoroutines();
+        if (_vfxInstance != null) { Destroy(_vfxInstance); _vfxInstance = null; }
         StartCoroutine(AnimateFade(1f, 0f, () =>
         {
             gameObject.SetActive(false);
             TreeClick.Unlock();
         }));
+    }
+
+    void OnDestroy()
+    {
+        if (_vfxInstance != null) Destroy(_vfxInstance);
     }
 
     void PopulateOld(EquipmentResult old)
@@ -397,45 +402,58 @@ public class EquipmentCompareUI : MonoBehaviour
 
     void EnableUpgradeGlow(Image iconImg, bool enable)
     {
-        if (_glowCoroutine != null) { StopCoroutine(_glowCoroutine); _glowCoroutine = null; }
-        if (_glowImage != null) _glowImage.gameObject.SetActive(false);
+        if (_vfxInstance != null) { Destroy(_vfxInstance); _vfxInstance = null; }
         if (!enable || iconImg == null) return;
-        _glowImage = EnsureGlowImage(iconImg);
-        _glowImage.gameObject.SetActive(true);
-        _glowCoroutine = StartCoroutine(GlowPulse(_glowImage));
+        _vfxInstance = CreateRainbowVFX(iconImg);
     }
 
-    static Image EnsureGlowImage(Image iconImg)
+    static GameObject CreateRainbowVFX(Image iconImg)
     {
-        Transform parent = iconImg.transform.parent;
-        if (parent == null) return null;
-        Transform t = parent.Find("UpgradeGlow");
-        if (t != null) return t.GetComponent<Image>();
-        var go = new GameObject("UpgradeGlow");
-        go.transform.SetParent(parent, false);
-        var iconRt = iconImg.GetComponent<RectTransform>();
-        var rt = go.AddComponent<RectTransform>();
-        rt.anchorMin = iconRt.anchorMin;
-        rt.anchorMax = iconRt.anchorMax;
-        rt.pivot = iconRt.pivot;
-        rt.anchoredPosition = iconRt.anchoredPosition;
-        rt.sizeDelta = iconRt.sizeDelta + new Vector2(10f, 10f);
-        var img = go.AddComponent<Image>();
-        img.color = new Color(1f, 0.78f, 0.2f, 0f);
-        img.raycastTarget = false;
-        go.transform.SetSiblingIndex(iconImg.transform.GetSiblingIndex());
-        return img;
-    }
+        var corners = new Vector3[4];
+        iconImg.rectTransform.GetWorldCorners(corners);
 
-    System.Collections.IEnumerator GlowPulse(Image glow)
-    {
-        while (true)
+        Canvas rootCanvas = iconImg.GetComponentInParent<Canvas>()?.rootCanvas;
+        bool isOverlay = rootCanvas != null && rootCanvas.renderMode == RenderMode.ScreenSpaceOverlay;
+
+        Vector3 worldCenter;
+        float iconWidth;
+
+        if (isOverlay && Camera.main != null)
         {
-            float a = 0.3f + 0.4f * Mathf.Abs(Mathf.Sin(Time.time * 2.5f));
-            var c = glow.color;
-            glow.color = new Color(c.r, c.g, c.b, a);
-            yield return null;
+            // Overlay 模式：corners 是屏幕像素坐标，需转换为世界坐标
+            float depth = Camera.main.nearClipPlane + 0.5f;
+            Vector2 sc = new Vector2((corners[0].x + corners[2].x) * 0.5f,
+                                     (corners[0].y + corners[2].y) * 0.5f);
+            worldCenter = Camera.main.ScreenToWorldPoint(new Vector3(sc.x, sc.y, depth));
+            Vector3 wl = Camera.main.ScreenToWorldPoint(new Vector3(corners[0].x, sc.y, depth));
+            Vector3 wr = Camera.main.ScreenToWorldPoint(new Vector3(corners[2].x, sc.y, depth));
+            iconWidth = Vector3.Distance(wl, wr);
         }
+        else
+        {
+            // Screen Space Camera / World Space：corners 已是世界坐标
+            worldCenter = (corners[0] + corners[1] + corners[2] + corners[3]) * 0.25f;
+            iconWidth   = Vector3.Distance(corners[0], corners[3]);
+            // 向摄像机偏移一点，确保在 Canvas 平面前方
+            if (Camera.main != null)
+                worldCenter += (Camera.main.transform.position - worldCenter).normalized * 0.05f;
+        }
+
+        var go = new GameObject("RainbowEquipmentVFX");
+        go.transform.position = worldCenter;
+        go.AddComponent<ParticleSystem>();
+        var vfx = go.AddComponent<RainbowEquipmentVFX>();
+        vfx.sizeScale = iconWidth;
+
+        // 把渲染排序设到 Canvas 之上，避免被 UI 压住
+        var rend = go.GetComponent<ParticleSystemRenderer>();
+        if (rootCanvas != null)
+        {
+            rend.sortingLayerID = rootCanvas.sortingLayerID;
+            rend.sortingOrder   = rootCanvas.sortingOrder + 100;
+        }
+
+        return go;
     }
 
     System.Collections.IEnumerator AnimateFade(float from, float to, System.Action onDone = null)
