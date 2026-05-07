@@ -327,7 +327,13 @@ public class EquipmentDropSystem : MonoBehaviour
         if (itemIcons == null || itemIcons.Length == 0) return null;
         int band = GetLevelBand(playerLevel);
         int idx = slot * NumBands + band;
-        return itemIcons[Mathf.Clamp(idx, 0, itemIcons.Length - 1)];
+        if (idx < 0 || idx >= itemIcons.Length)
+        {
+            Debug.LogWarning($"[EquipmentDropSystem] Equipment icon index out of range: slot={slot}, level={playerLevel}, band={band}, index={idx}, iconCount={itemIcons.Length}");
+            return null;
+        }
+
+        return itemIcons[idx];
     }
 
     string GetItemName(int slot, int playerLevel)

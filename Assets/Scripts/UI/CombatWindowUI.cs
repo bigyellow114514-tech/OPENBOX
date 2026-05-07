@@ -29,6 +29,7 @@ public class CombatWindowUI : MonoBehaviour
     Texture2D _playerHpTex;
     Texture2D _enemyHpTex;
     Texture2D _buffTex;
+    Texture2D _stunBuffSheet;
 
     GUIStyle _titleStyle;
     GUIStyle _labelStyle;
@@ -37,7 +38,6 @@ public class CombatWindowUI : MonoBehaviour
     GUIStyle _damageStyle;
     GUIStyle _healStyle;
     GUIStyle _popupStyle;
-    GUIStyle _buffStyle;
 
     const float EventDuration = 0.85f;
     const float AttackReachTime = 0.18f;
@@ -48,6 +48,8 @@ public class CombatWindowUI : MonoBehaviour
     const float PlayerBaselineYOffset = 0.16f;
     const float PlayerIdleYOffset = -0.1f;
     const float PlayerAttackedYOffset = 0.16f;
+    const int StunBuffColumns = 3;
+    const float StunBuffFps = 8f;
 
     public void Open(StageData stage, CombatResult result)
     {
@@ -142,6 +144,7 @@ public class CombatWindowUI : MonoBehaviour
         _playerHpTex = MakeTex(new Color(0.16f, 0.72f, 0.32f, 1f));
         _enemyHpTex = MakeTex(new Color(0.86f, 0.22f, 0.18f, 1f));
         _buffTex = MakeTex(new Color(0.95f, 0.72f, 0.12f, 1f));
+        _stunBuffSheet = Resources.Load<Texture2D>("Sprites/Buff/Buff_Stun");
         _titleStyle = new GUIStyle(GUI.skin.label)
         {
             fontSize = 20,
@@ -175,7 +178,6 @@ public class CombatWindowUI : MonoBehaviour
         _damageStyle = FloatingStyle(new Color(1f, 0.22f, 0.18f, 1f), 24);
         _healStyle = FloatingStyle(new Color(0.25f, 1f, 0.35f, 1f), 23);
         _popupStyle = FloatingStyle(new Color(1f, 0.88f, 0.18f, 1f), 22);
-        _buffStyle = FloatingStyle(Color.black, 15);
     }
 
     void ResolveUnitSprites()
@@ -477,8 +479,15 @@ public class CombatWindowUI : MonoBehaviour
     void DrawStunBuff(Rect characterRect)
     {
         Rect icon = new Rect(characterRect.center.x - 16f, characterRect.y - 18f, 32f, 32f);
-        GUI.DrawTexture(icon, _buffTex);
-        GUI.Label(icon, "Z", _buffStyle);
+        if (_stunBuffSheet == null)
+        {
+            GUI.DrawTexture(icon, _buffTex);
+            return;
+        }
+
+        int frame = Mathf.FloorToInt(Time.unscaledTime * StunBuffFps) % StunBuffColumns;
+        Rect uv = new Rect(frame / (float)StunBuffColumns, 0f, 1f / StunBuffColumns, 1f);
+        GUI.DrawTextureWithTexCoords(icon, _stunBuffSheet, uv, true);
     }
 
     void DrawEventText(CombatLogEntry entry, float progress, Rect playerRect, Rect enemyRect)
