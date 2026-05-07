@@ -96,6 +96,12 @@ public class CharacterAttrUI : MonoBehaviour
     void OnGUI()
     {
         InitStyles();
+        Rect area = HudLayoutUtility.Begin();
+        try
+        {
+        float left = area.x + 10f;
+        float top = area.y + 10f;
+        float buttonW = HudLayoutUtility.IsNarrow ? 84f : 88f;
 
         if (GUI.Button(new Rect(10, 10, 88, 30), "角色属性", _buttonStyle))
             _show = !_show;
@@ -119,13 +125,13 @@ public class CharacterAttrUI : MonoBehaviour
         if (chr == null || exp == null) return;
 
         RoleAttr attr = chr.FinalAttr;
-        float panelW = Mathf.Min(430f, Screen.width - 20f);
-        float panelX = 10f;
-        float panelY = 82f;
+        float panelW = Mathf.Min(430f, area.width - 20f);
+        float panelX = left;
+        float panelY = top + 72f;
         float pad = 10f;
         float titleH = 30f;
         float sectionGap = 8f;
-        float panelH = 510f;
+        float panelH = Mathf.Min(510f, area.height - (panelY - area.y) - 10f);
 
         GUI.DrawTexture(new Rect(panelX, panelY, panelW, panelH), _bgTex);
         GUI.Label(new Rect(panelX + pad, panelY + 6f, panelW - pad * 2f, titleH), "详细属性", _titleStyle);
@@ -175,6 +181,11 @@ public class CharacterAttrUI : MonoBehaviour
             Stat("强化宠物", attr.PetIncrease),
             Stat("弱化宠物", attr.PetDecrease),
         }, 3);
+        }
+        finally
+        {
+            HudLayoutUtility.End();
+        }
     }
 
     void DrawCombatPower(Rect rect, int combatPower)

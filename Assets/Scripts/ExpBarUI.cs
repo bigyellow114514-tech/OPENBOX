@@ -80,16 +80,22 @@ public class ExpBarUI : MonoBehaviour
 
         InitStyles();
 
-        float sw     = Screen.width;
-        float barW   = Mathf.Clamp(sw * barWidthRatio, minBarWidth, maxBarWidth);
+        Rect area = HudLayoutUtility.Begin();
+        try
+        {
+        bool narrow = HudLayoutUtility.IsNarrow;
+        float sw     = area.width;
+        float barW   = narrow
+            ? Mathf.Clamp(sw - labelWidth - 24f, 150f, 230f)
+            : Mathf.Clamp(sw * barWidthRatio, minBarWidth, maxBarWidth);
         float barH   = barHeight;
         float pad    = 2f;
         float labelW = labelWidth;
         float gap    = barGap;
-        float barY   = topOffset;
+        float barY   = area.y + (narrow ? 82f : topOffset);
 
-        float totalW = labelW + barW + gap + labelW + barW;
-        float startX = (sw - totalW) * 0.5f;
+        float totalW = narrow ? labelW + barW : labelW + barW + gap + labelW + barW;
+        float startX = area.x + (sw - totalW) * 0.5f;
 
         DrawExpBar(
             x: startX, y: barY,
@@ -100,12 +106,18 @@ public class ExpBarUI : MonoBehaviour
             fillTex:   _fillTex
         );
 
-        float tStartX  = startX + labelW + barW + gap;
+        float tStartX  = narrow ? startX : startX + labelW + barW + gap;
         var   tMgr     = TreeExpManager.Instance;
         int   treeLv   = tMgr != null ? tMgr.UpgradeLevel : 1;
         bool  treeMax  = tMgr != null && tMgr.UpgradeTier >= TreeExpManager.MaxUpgradeTier;
         string treeLvText = treeMax ? "树满级" : $"树Lv.{treeLv}";
-        GUI.Label(new Rect(tStartX, barY, labelW, barH), treeLvText, _levelStyle);
+        float treeLabelY = narrow ? barY + barH + 8f : barY;
+        GUI.Label(new Rect(tStartX, treeLabelY, labelW, barH), treeLvText, _levelStyle);
+        }
+        finally
+        {
+            HudLayoutUtility.End();
+        }
     }
 
     void DrawExpBar(float x, float y,

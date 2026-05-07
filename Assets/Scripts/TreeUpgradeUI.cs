@@ -73,13 +73,19 @@ public class TreeUpgradeUI : MonoBehaviour
         InitStyles();
 
         // Mirror ExpBarUI layout to land exactly on the old tree bar position
-        float sw     = Screen.width;
-        float barW   = Mathf.Clamp(sw * barWidthRatio, minBarWidth, maxBarWidth);
-        float totalW = labelWidth + barW + barGap + labelWidth + barW;
-        float startX = (sw - totalW) * 0.5f;
+        Rect area = HudLayoutUtility.Begin();
+        try
+        {
+        bool narrow = HudLayoutUtility.IsNarrow;
+        float sw     = area.width;
+        float barW   = narrow
+            ? Mathf.Clamp(sw - labelWidth - 24f, 150f, 230f)
+            : Mathf.Clamp(sw * barWidthRatio, minBarWidth, maxBarWidth);
+        float totalW = narrow ? labelWidth + barW : labelWidth + barW + barGap + labelWidth + barW;
+        float startX = area.x + (sw - totalW) * 0.5f;
         // Button occupies [tStartX + labelWidth, tStartX + labelWidth + barW]
-        float bx = startX + labelWidth + barW + barGap + labelWidth;
-        float by = topOffset;
+        float bx = narrow ? startX + labelWidth : startX + labelWidth + barW + barGap + labelWidth;
+        float by = area.y + (narrow ? 82f + barHeight + 8f : topOffset);
 
         bool isMax     = treeMgr.UpgradeTier >= TreeExpManager.MaxUpgradeTier;
         int  cost      = treeMgr.GetNextUpgradeCost();
@@ -96,6 +102,11 @@ public class TreeUpgradeUI : MonoBehaviour
             string label = $"升级大树  {cost:N0}金";
             if (GUI.Button(rect, label, canAfford ? _btnStyle : _btnDisabledStyle) && canAfford)
                 treeMgr.TryUpgrade();
+        }
+        }
+        finally
+        {
+            HudLayoutUtility.End();
         }
     }
 

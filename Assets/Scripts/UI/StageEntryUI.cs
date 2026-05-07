@@ -106,14 +106,19 @@ public class StageEntryUI : MonoBehaviour
         var stamina      = PlayerStaminaManager.Instance;
         if (stageManager == null) return;
 
-        float resourceX = Screen.width - resourceWidth - resourceRightOffset;
-        float resourceY = resourceTopOffset;
+        Rect area = HudLayoutUtility.Begin();
+        bool narrow = HudLayoutUtility.IsNarrow;
+        float actualResourceWidth = narrow ? Mathf.Min(resourceWidth, area.width - 28f) : resourceWidth;
+        float actualStageButtonWidth = narrow ? Mathf.Min(stageButtonWidth, 136f) : stageButtonWidth;
+        float actualStageButtonHeight = narrow ? 48f : stageButtonHeight;
+        float resourceX = area.x + area.width - actualResourceWidth - resourceRightOffset;
+        float resourceY = area.y + (narrow ? 124f : resourceTopOffset);
         float iconS = 20f;
 
         Rect panelRect = new Rect(
             resourceX - resourcePadding,
             resourceY - resourcePadding,
-            resourceWidth + resourcePadding * 2f,
+            actualResourceWidth + resourcePadding * 2f,
             resourceHeight + resourcePadding * 2f
         );
         if (resourcePanelTexture != null)
@@ -122,8 +127,10 @@ public class StageEntryUI : MonoBehaviour
             GUI.Box(panelRect, GUIContent.none);
 
         float staminaX = resourceX;
-        float ticketX = resourceX + staminaColumnWidth;
-        float goldX = ticketX + ticketColumnWidth;
+        float actualStaminaWidth = narrow ? actualResourceWidth * 0.38f : staminaColumnWidth;
+        float actualTicketWidth = narrow ? actualResourceWidth * 0.28f : ticketColumnWidth;
+        float ticketX = resourceX + actualStaminaWidth;
+        float goldX = ticketX + actualTicketWidth;
         float rowY = resourceY + (resourceHeight - 24f) * 0.5f;
         if (_heartTex != null)
             GUI.DrawTexture(new Rect(staminaX, rowY + 2f, iconS, iconS), _heartTex, ScaleMode.ScaleToFit);
@@ -131,15 +138,17 @@ public class StageEntryUI : MonoBehaviour
         string staminaText = stamina != null
             ? $"体力 {stamina.CurrentStamina}/{stamina.MaxStamina}"
             : "体力 --";
-        GUI.Label(new Rect(staminaX + ((_heartTex != null) ? iconS + 4f : 0f), rowY, staminaColumnWidth, 24f), staminaText, _staminaStyle);
+        GUI.Label(new Rect(staminaX + ((_heartTex != null) ? iconS + 4f : 0f), rowY, actualStaminaWidth, 24f), staminaText, _staminaStyle);
         GUI.Label(new Rect(ticketX, rowY, ticketColumnWidth, 24f), "宠物券 " + (resources != null ? resources.PetTickets : 0), _resourceStyle);
         GUI.Label(new Rect(goldX, rowY, resourceWidth - (goldX - resourceX), 24f), "金币 " + (resources != null ? resources.Gold : 0), _resourceStyle);
 
-        float buttonX = Screen.width - stageButtonWidth - stageButtonRightOffset;
-        float buttonY = resourceY + resourceHeight + stageButtonTopGap;
+        float buttonX = area.x + area.width - actualStageButtonWidth - stageButtonRightOffset;
+        float buttonY = resourceY + resourceHeight + (narrow ? 12f : stageButtonTopGap);
         string stageText = "第 " + stageManager.CurrentStageId + " 关\n挑战";
-        if (GUI.Button(new Rect(buttonX, buttonY, stageButtonWidth, stageButtonHeight), stageText, _buttonStyle))
+        if (GUI.Button(new Rect(buttonX, buttonY, actualStageButtonWidth, actualStageButtonHeight), stageText, _buttonStyle))
             StartChallenge();
+
+        HudLayoutUtility.End();
     }
 
     void StartChallenge()
