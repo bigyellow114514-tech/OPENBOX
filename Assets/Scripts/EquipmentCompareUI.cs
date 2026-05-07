@@ -14,6 +14,7 @@ public class EquipmentCompareUI : MonoBehaviour
     }
 
     [Header("当前装备")]
+    [SerializeField] Image oldCardBackgroundImage;
     [SerializeField] Image oldIconImage;
     [SerializeField] TMP_Text oldLevelText;
     [SerializeField] TMP_Text oldNameText;
@@ -22,6 +23,7 @@ public class EquipmentCompareUI : MonoBehaviour
     [SerializeField] Transform oldStatsContainer;
 
     [Header("新装备")]
+    [SerializeField] Image newCardBackgroundImage;
     [SerializeField] Image newIconImage;
     [SerializeField] TMP_Text newLevelText;
     [SerializeField] TMP_Text newNameText;
@@ -40,6 +42,9 @@ public class EquipmentCompareUI : MonoBehaviour
     [SerializeField] TMP_FontAsset chineseFontAsset;
     [SerializeField] float animDuration = 0.25f;
 
+    [Header("Quality Background")]
+    [SerializeField] Sprite[] rarityBackgroundSprites = new Sprite[6];
+
     CanvasGroup _cg;
     EquipmentResult _newItem;
     EquipmentResult _oldItem;
@@ -56,6 +61,7 @@ public class EquipmentCompareUI : MonoBehaviour
         decomposeButton?.onClick.AddListener(OnDecompose);
         closeButton?.onClick.AddListener(OnClose);
         gameObject.SetActive(false);
+        ResolveCardBackgrounds();
 
         oldLevelText = EnsureLevelText(transform.Find("ContentRow/Card_当前装备"), oldLevelText, chineseFontAsset);
         newLevelText = EnsureLevelText(transform.Find("ContentRow/Card_新装备"), newLevelText, chineseFontAsset);
@@ -66,6 +72,7 @@ public class EquipmentCompareUI : MonoBehaviour
     {
         _newItem = newItem;
         _oldItem = oldItem;
+        ResolveCardBackgrounds();
         closeButton?.gameObject.SetActive(false);
         _cg.alpha = 0f;
         gameObject.SetActive(true);
@@ -99,6 +106,7 @@ public class EquipmentCompareUI : MonoBehaviour
 
     void PopulateOld(EquipmentResult old)
     {
+        RefreshBackground(oldCardBackgroundImage, old);
         oldIconImage.sprite = old.icon;
         oldIconImage.enabled = old.icon != null;
         if (oldLevelText != null)
@@ -115,6 +123,7 @@ public class EquipmentCompareUI : MonoBehaviour
 
     void PopulateNew(EquipmentResult newItem, EquipmentResult oldItem)
     {
+        RefreshBackground(newCardBackgroundImage, newItem);
         newIconImage.sprite = newItem.icon;
         newIconImage.enabled = newItem.icon != null;
         if (newLevelText != null)
@@ -130,6 +139,51 @@ public class EquipmentCompareUI : MonoBehaviour
         RoleAttr delta = newItem.bonusAttr - oldItem.bonusAttr;
         SetBattlePowerText(CalculateReplacementCombatPowerDelta(newItem, oldItem));
         BuildStatRows(newStatsContainer, newItem.bonusAttr, delta);
+    }
+
+    void ResolveCardBackgrounds()
+    {
+        if (oldCardBackgroundImage == null)
+            oldCardBackgroundImage = FindCardBackground(oldIconImage);
+        if (newCardBackgroundImage == null)
+            newCardBackgroundImage = FindCardBackground(newIconImage);
+    }
+
+    Image FindCardBackground(Image icon)
+    {
+        Transform current = icon != null ? icon.transform.parent : null;
+        while (current != null && current != transform)
+        {
+            var image = current.GetComponent<Image>();
+            if (image != null)
+                return image;
+
+            current = current.parent;
+        }
+
+        return null;
+    }
+
+    void RefreshBackground(Image backgroundImage, EquipmentResult item)
+    {
+        if (backgroundImage == null || item == null) return;
+
+        Sprite sprite = GetRarityBackground(item.rarity, backgroundImage.sprite);
+        if (sprite != null)
+            backgroundImage.sprite = sprite;
+    }
+
+    Sprite GetRarityBackground(int rarity, Sprite fallback)
+    {
+        int index = Mathf.Clamp(rarity, 1, 6) - 1;
+        if (rarityBackgroundSprites != null &&
+            index < rarityBackgroundSprites.Length &&
+            rarityBackgroundSprites[index] != null)
+        {
+            return rarityBackgroundSprites[index];
+        }
+
+        return fallback;
     }
 
     int CalculateReplacementCombatPowerDelta(EquipmentResult newItem, EquipmentResult oldItem)

@@ -114,12 +114,14 @@ public static class EquipmentCompareBuilder
 
         // ── 连线 EquipmentCompareUI ───────────────────────────────
         var so = new SerializedObject(compareUI);
+        so.FindProperty("oldCardBackgroundImage").objectReferenceValue = oldCard.GetComponent<Image>();
         so.FindProperty("oldIconImage").objectReferenceValue      = Find<Image>(oldCard,    "TopRow/IconSlot/ItemIcon");
         so.FindProperty("oldLevelText").objectReferenceValue      = oldLevelText;
         so.FindProperty("oldNameText").objectReferenceValue       = Find<TMP_Text>(oldCard, "TopRow/InfoGroup/NameText");
         so.FindProperty("oldSlotText").objectReferenceValue       = Find<TMP_Text>(oldCard, "TopRow/InfoGroup/SlotText");
         so.FindProperty("oldDescText").objectReferenceValue       = Find<TMP_Text>(oldCard, "BottomPanel/DescriptionText");
         so.FindProperty("oldStatsContainer").objectReferenceValue = oldCard.transform.Find("BottomPanel/StatsContainer");
+        so.FindProperty("newCardBackgroundImage").objectReferenceValue = newCard.GetComponent<Image>();
         so.FindProperty("newIconImage").objectReferenceValue      = Find<Image>(newCard,    "TopRow/IconSlot/ItemIcon");
         so.FindProperty("newLevelText").objectReferenceValue      = newLevelText;
         so.FindProperty("newNameText").objectReferenceValue       = Find<TMP_Text>(newCard, "TopRow/InfoGroup/NameText");
@@ -131,6 +133,7 @@ public static class EquipmentCompareBuilder
         so.FindProperty("closeButton").objectReferenceValue        = keepBtn;
         so.FindProperty("statRowPrefab").objectReferenceValue      = statRowPrefab;
         so.FindProperty("chineseFontAsset").objectReferenceValue   = font;
+        AssignRarityBackgrounds(so.FindProperty("rarityBackgroundSprites"));
         so.ApplyModifiedProperties();
 
         Selection.activeGameObject = root;
@@ -139,6 +142,25 @@ public static class EquipmentCompareBuilder
     }
 
     // ── 复制卡片并清理 ─────────────────────────────────────────────
+
+    static void AssignRarityBackgrounds(SerializedProperty property)
+    {
+        if (property == null || !property.isArray) return;
+
+        string[] paths =
+        {
+            "Assets/Picture/UI/Equip_y_gray.png",
+            "Assets/Picture/UI/Equip_y_green.png",
+            "Assets/Picture/UI/Equip_y_blue.png",
+            "Assets/Picture/UI/Equip_y_purple.png",
+            "Assets/Picture/UI/Equip_y_orange.png",
+            "Assets/Picture/UI/Equip_y_pink.png",
+        };
+
+        property.arraySize = paths.Length;
+        for (int i = 0; i < paths.Length; i++)
+            property.GetArrayElementAtIndex(i).objectReferenceValue = AssetDatabase.LoadAssetAtPath<Sprite>(paths[i]);
+    }
 
     static GameObject DuplicateCard(GameObject source, string newName, Transform parent)
     {

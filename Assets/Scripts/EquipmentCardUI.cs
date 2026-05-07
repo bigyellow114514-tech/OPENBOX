@@ -7,10 +7,14 @@ public class EquipmentCardUI : MonoBehaviour
     public static EquipmentCardUI Instance { get; private set; }
 
     [Header("Top Row")]
+    [SerializeField] Image cardBackgroundImage;
     [SerializeField] Image iconImage;
     [SerializeField] TMP_Text levelText;
     [SerializeField] TMP_Text nameText;
     [SerializeField] TMP_Text slotText;
+
+    [Header("Quality Background")]
+    [SerializeField] Sprite[] rarityBackgroundSprites = new Sprite[6];
 
     [Header("Stats Area")]
     [SerializeField] Transform statsContainer;
@@ -41,6 +45,9 @@ public class EquipmentCardUI : MonoBehaviour
     {
         Instance = this;
         _canvasGroup = GetComponent<CanvasGroup>();
+        if (cardBackgroundImage == null)
+            cardBackgroundImage = GetComponent<Image>();
+
         equipButton?.onClick.AddListener(OnEquip);
         decomposeButton?.onClick.AddListener(OnDecompose);
         closeButton?.onClick.AddListener(OnCloseButton);
@@ -129,6 +136,7 @@ public class EquipmentCardUI : MonoBehaviour
 
     void Populate(EquipmentResult data)
     {
+        RefreshBackground(data);
         iconImage.sprite = data.icon;
         iconImage.enabled = data.icon != null;
         if (levelText != null)
@@ -142,6 +150,30 @@ public class EquipmentCardUI : MonoBehaviour
         }
 
         BuildStatRows(data.bonusAttr);
+    }
+
+    void RefreshBackground(EquipmentResult data)
+    {
+        if (cardBackgroundImage == null)
+            cardBackgroundImage = GetComponent<Image>();
+        if (cardBackgroundImage == null || data == null) return;
+
+        Sprite sprite = GetRarityBackground(data.rarity);
+        if (sprite != null)
+            cardBackgroundImage.sprite = sprite;
+    }
+
+    Sprite GetRarityBackground(int rarity)
+    {
+        int index = Mathf.Clamp(rarity, 1, 6) - 1;
+        if (rarityBackgroundSprites != null &&
+            index < rarityBackgroundSprites.Length &&
+            rarityBackgroundSprites[index] != null)
+        {
+            return rarityBackgroundSprites[index];
+        }
+
+        return cardBackgroundImage != null ? cardBackgroundImage.sprite : null;
     }
 
     void BuildStatRows(RoleAttr attr)

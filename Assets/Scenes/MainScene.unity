@@ -826,12 +826,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 79ba4a240142dff4a9c8a5fef4a77ebc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  oldCardBackgroundImage: {fileID: 219528456}
   oldIconImage: {fileID: 342004524}
   oldLevelText: {fileID: 609882186}
   oldNameText: {fileID: 1870963098}
   oldSlotText: {fileID: 1162607580}
   oldDescText: {fileID: 2010888147}
   oldStatsContainer: {fileID: 1707407320}
+  newCardBackgroundImage: {fileID: 28873265}
   newIconImage: {fileID: 1092022380}
   newLevelText: {fileID: 1363358093}
   newNameText: {fileID: 1309204477}
@@ -845,6 +847,13 @@ MonoBehaviour:
   statRowPrefab: {fileID: 6892168215733506625, guid: fef87ff3e00083b4eaef9ebbb3e1c83b, type: 3}
   chineseFontAsset: {fileID: 11400000, guid: 575bad7137f645b47b8ce9f6c852ebaa, type: 2}
   animDuration: 0.25
+  rarityBackgroundSprites:
+  - {fileID: 21300000, guid: f3c4c56e324c4562bbb8b8b16d1cfb2b, type: 3}
+  - {fileID: 21300000, guid: df9af2b5c6ce488aa01048dbcf24cf6e, type: 3}
+  - {fileID: 21300000, guid: 32f546b912de48d194c12ee2ff181cd8, type: 3}
+  - {fileID: 21300000, guid: 481b394436f041f5873a702a3dbdc14d, type: 3}
+  - {fileID: 21300000, guid: d5cd85ec416848ebb10bc1078283ac3b, type: 3}
+  - {fileID: 21300000, guid: 123a873375974bcc8dc1094de308138c, type: 3}
 --- !u!225 &169346263
 CanvasGroup:
   m_ObjectHideFlags: 0
@@ -7485,10 +7494,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: dd6901c322153254588bdac6f0b30ec7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  cardBackgroundImage: {fileID: 1558282532}
   iconImage: {fileID: 444554273}
   levelText: {fileID: 210082808}
   nameText: {fileID: 1965627866}
   slotText: {fileID: 953508636}
+  rarityBackgroundSprites:
+  - {fileID: 21300000, guid: f3c4c56e324c4562bbb8b8b16d1cfb2b, type: 3}
+  - {fileID: 21300000, guid: df9af2b5c6ce488aa01048dbcf24cf6e, type: 3}
+  - {fileID: 21300000, guid: 32f546b912de48d194c12ee2ff181cd8, type: 3}
+  - {fileID: 21300000, guid: 481b394436f041f5873a702a3dbdc14d, type: 3}
+  - {fileID: 21300000, guid: d5cd85ec416848ebb10bc1078283ac3b, type: 3}
+  - {fileID: 21300000, guid: 123a873375974bcc8dc1094de308138c, type: 3}
   statsContainer: {fileID: 1605827366}
   statRowPrefab: {fileID: 6892168215733506625, guid: fef87ff3e00083b4eaef9ebbb3e1c83b, type: 3}
   descriptionText: {fileID: 1171328027}

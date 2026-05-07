@@ -349,6 +349,7 @@ public static class EquipmentCardBuilder
 
         // ── 连线 EquipmentCardUI 的 SerializedField ──
         var cardSO = new SerializedObject(cardUI);
+        cardSO.FindProperty("cardBackgroundImage").objectReferenceValue = cardImg;
         cardSO.FindProperty("iconImage").objectReferenceValue        = itemIconImg;
         cardSO.FindProperty("levelText").objectReferenceValue        = levelText;
         cardSO.FindProperty("nameText").objectReferenceValue         = nameText;
@@ -360,9 +361,29 @@ public static class EquipmentCardBuilder
         cardSO.FindProperty("equipButton").objectReferenceValue      = equipBtn;
         cardSO.FindProperty("decomposeButton").objectReferenceValue  = decomposeBtn;
         cardSO.FindProperty("chineseFontAsset").objectReferenceValue = font;
+        AssignRarityBackgrounds(cardSO.FindProperty("rarityBackgroundSprites"));
         cardSO.ApplyModifiedProperties();
 
         return card;
+    }
+
+    static void AssignRarityBackgrounds(SerializedProperty property)
+    {
+        if (property == null || !property.isArray) return;
+
+        string[] paths =
+        {
+            "Assets/Picture/UI/Equip_y_gray.png",
+            "Assets/Picture/UI/Equip_y_green.png",
+            "Assets/Picture/UI/Equip_y_blue.png",
+            "Assets/Picture/UI/Equip_y_purple.png",
+            "Assets/Picture/UI/Equip_y_orange.png",
+            "Assets/Picture/UI/Equip_y_pink.png",
+        };
+
+        property.arraySize = paths.Length;
+        for (int i = 0; i < paths.Length; i++)
+            property.GetArrayElementAtIndex(i).objectReferenceValue = AssetDatabase.LoadAssetAtPath<Sprite>(paths[i]);
     }
 
     // 创建动作按钮（锚定卡片底部，ignoreLayout，随卡片 CanvasGroup 一起淡入淡出）
