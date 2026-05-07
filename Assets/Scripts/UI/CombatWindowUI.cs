@@ -44,6 +44,10 @@ public class CombatWindowUI : MonoBehaviour
     const float AttackReturnTime = 0.42f;
     const float EnemyIdleFps = 16f;
     const float EnemyDeathDuration = 0.9f;
+    const float PlayerSheetFrameScale = 1.5f;
+    const float PlayerBaselineYOffset = 0.16f;
+    const float PlayerIdleYOffset = -0.1f;
+    const float PlayerAttackedYOffset = 0.16f;
 
     public void Open(StageData stage, CombatResult result)
     {
@@ -243,6 +247,9 @@ public class CombatWindowUI : MonoBehaviour
     {
         float size = Mathf.Min(arena.height * 0.68f, arena.width * 0.34f);
         float y = arena.y + arena.height * 0.28f;
+        if (player)
+            y += size * PlayerBaselineYOffset;
+
         float x = player ? arena.x + arena.width * 0.08f : arena.xMax - arena.width * 0.08f - size;
         return new Rect(x, y, size, size);
     }
@@ -284,18 +291,26 @@ public class CombatWindowUI : MonoBehaviour
         {
             if (current.ActorIsPlayer && playerAttackSheet != null)
             {
-                DrawSheetFrame(rect, playerAttackSheet, AnimationFrame(progress), false);
+                if (progress <= AttackReturnTime)
+                    DrawPlayerSheetFrame(rect, playerAttackSheet, AnimationFrame(progress), false);
+                else
+                    DrawPlayerIdle(rect);
                 return;
             }
 
             if (current.TargetIsPlayer && playerAttackedSheet != null && !current.Dodged)
             {
-                DrawSheetFrame(rect, playerAttackedSheet, AnimationFrame(progress), false);
+                DrawPlayerSheetFrame(OffsetRectY(rect, rect.height * PlayerAttackedYOffset), playerAttackedSheet, AnimationFrame(progress), false);
                 return;
             }
         }
 
-        DrawCharacter(rect, playerSprite, false);
+        DrawPlayerIdle(rect);
+    }
+
+    void DrawPlayerIdle(Rect rect)
+    {
+        DrawCharacter(OffsetRectY(rect, rect.height * PlayerIdleYOffset), playerSprite, false);
     }
 
     void DrawEnemyCharacter(Rect rect, CombatLogEntry current, float progress)
@@ -369,16 +384,17 @@ public class CombatWindowUI : MonoBehaviour
             textureRect.y / sprite.texture.height,
             textureRect.width / sprite.texture.width,
             textureRect.height / sprite.texture.height);
+        Rect drawRect = FitRectToAspect(rect, textureRect.width / textureRect.height);
 
         if (!flip)
         {
-            GUI.DrawTextureWithTexCoords(rect, sprite.texture, uv, true);
+            GUI.DrawTextureWithTexCoords(drawRect, sprite.texture, uv, true);
             return;
         }
 
         Matrix4x4 old = GUI.matrix;
-        GUIUtility.ScaleAroundPivot(new Vector2(-1f, 1f), rect.center);
-        GUI.DrawTextureWithTexCoords(rect, sprite.texture, uv, true);
+        GUIUtility.ScaleAroundPivot(new Vector2(-1f, 1f), drawRect.center);
+        GUI.DrawTextureWithTexCoords(drawRect, sprite.texture, uv, true);
         GUI.matrix = old;
     }
 
@@ -402,17 +418,54 @@ public class CombatWindowUI : MonoBehaviour
             1f - ((row + 1f) / rows),
             1f / cols,
             1f / rows);
+        Rect drawRect = FitRectToAspect(rect, (sheet.texture.width / (float)cols) / (sheet.texture.height / (float)rows));
 
         if (!flip)
         {
-            GUI.DrawTextureWithTexCoords(rect, sheet.texture, uv, true);
+            GUI.DrawTextureWithTexCoords(drawRect, sheet.texture, uv, true);
             return;
         }
 
         Matrix4x4 old = GUI.matrix;
-        GUIUtility.ScaleAroundPivot(new Vector2(-1f, 1f), rect.center);
-        GUI.DrawTextureWithTexCoords(rect, sheet.texture, uv, true);
+        GUIUtility.ScaleAroundPivot(new Vector2(-1f, 1f), drawRect.center);
+        GUI.DrawTextureWithTexCoords(drawRect, sheet.texture, uv, true);
         GUI.matrix = old;
+    }
+
+    void DrawPlayerSheetFrame(Rect rect, Sprite sheet, int frameIndex, bool flip)
+    {
+        DrawSheetFrame(ScaleRectFromBottom(rect, PlayerSheetFrameScale), sheet, frameIndex, flip);
+    }
+
+    Rect FitRectToAspect(Rect rect, float aspect)
+    {
+        if (aspect <= 0f) return rect;
+
+        float rectAspect = rect.width / rect.height;
+        if (rectAspect > aspect)
+        {
+            float width = rect.height * aspect;
+            return new Rect(rect.center.x - width * 0.5f, rect.y, width, rect.height);
+        }
+
+        float height = rect.width / aspect;
+        return new Rect(rect.x, rect.center.y - height * 0.5f, rect.width, height);
+    }
+
+    Rect ScaleRectFromBottom(Rect rect, float scale)
+    {
+        scale = Mathf.Max(0.01f, scale);
+        return new Rect(
+            rect.center.x - rect.width * scale * 0.5f,
+            rect.yMax - rect.height * scale,
+            rect.width * scale,
+            rect.height * scale);
+    }
+
+    Rect OffsetRectY(Rect rect, float yOffset)
+    {
+        rect.y += yOffset;
+        return rect;
     }
 
     int AnimationFrame(float progress)
