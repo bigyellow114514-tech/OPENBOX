@@ -960,6 +960,14 @@ MonoBehaviour:
   backgroundRenderer: {fileID: 177854556}
   iconRenderer: {fileID: 1163149466}
   iconFill: 0.85
+  emptyBackgroundSprite: {fileID: 21300000, guid: 1dc106d73cfe4e6eb4501ce58a198ce4, type: 3}
+  rarityBackgroundSprites:
+  - {fileID: 21300000, guid: 1dc106d73cfe4e6eb4501ce58a198ce4, type: 3}
+  - {fileID: 21300000, guid: 7f45535b64fd4d879b097e0ce301f5b5, type: 3}
+  - {fileID: 21300000, guid: 59df10f847e1463ca6ed6205da6dbdf2, type: 3}
+  - {fileID: 21300000, guid: b2c87c998fee4388bb1132c2bc8cf3f1, type: 3}
+  - {fileID: 21300000, guid: f0beb15a437b4aa6aa42d6f864f51b0c, type: 3}
+  - {fileID: 21300000, guid: d3c20c3241fe492da63418ea94b5027f, type: 3}
 --- !u!1 &184231533
 GameObject:
   m_ObjectHideFlags: 0
@@ -2421,6 +2429,14 @@ MonoBehaviour:
   backgroundRenderer: {fileID: 312633065}
   iconRenderer: {fileID: 992855565}
   iconFill: 0.85
+  emptyBackgroundSprite: {fileID: 21300000, guid: 1dc106d73cfe4e6eb4501ce58a198ce4, type: 3}
+  rarityBackgroundSprites:
+  - {fileID: 21300000, guid: 1dc106d73cfe4e6eb4501ce58a198ce4, type: 3}
+  - {fileID: 21300000, guid: 7f45535b64fd4d879b097e0ce301f5b5, type: 3}
+  - {fileID: 21300000, guid: 59df10f847e1463ca6ed6205da6dbdf2, type: 3}
+  - {fileID: 21300000, guid: b2c87c998fee4388bb1132c2bc8cf3f1, type: 3}
+  - {fileID: 21300000, guid: f0beb15a437b4aa6aa42d6f864f51b0c, type: 3}
+  - {fileID: 21300000, guid: d3c20c3241fe492da63418ea94b5027f, type: 3}
 --- !u!1 &320635242
 GameObject:
   m_ObjectHideFlags: 0
@@ -2524,6 +2540,14 @@ MonoBehaviour:
   backgroundRenderer: {fileID: 320635244}
   iconRenderer: {fileID: 1829932039}
   iconFill: 0.85
+  emptyBackgroundSprite: {fileID: 21300000, guid: 1dc106d73cfe4e6eb4501ce58a198ce4, type: 3}
+  rarityBackgroundSprites:
+  - {fileID: 21300000, guid: 1dc106d73cfe4e6eb4501ce58a198ce4, type: 3}
+  - {fileID: 21300000, guid: 7f45535b64fd4d879b097e0ce301f5b5, type: 3}
+  - {fileID: 21300000, guid: 59df10f847e1463ca6ed6205da6dbdf2, type: 3}
+  - {fileID: 21300000, guid: b2c87c998fee4388bb1132c2bc8cf3f1, type: 3}
+  - {fileID: 21300000, guid: f0beb15a437b4aa6aa42d6f864f51b0c, type: 3}
+  - {fileID: 21300000, guid: d3c20c3241fe492da63418ea94b5027f, type: 3}
 --- !u!1 &329761532
 GameObject:
   m_ObjectHideFlags: 0
@@ -3776,6 +3800,14 @@ MonoBehaviour:
   backgroundRenderer: {fileID: 536543281}
   iconRenderer: {fileID: 1812132933}
   iconFill: 0.85
+  emptyBackgroundSprite: {fileID: 21300000, guid: 1dc106d73cfe4e6eb4501ce58a198ce4, type: 3}
+  rarityBackgroundSprites:
+  - {fileID: 21300000, guid: 1dc106d73cfe4e6eb4501ce58a198ce4, type: 3}
+  - {fileID: 21300000, guid: 7f45535b64fd4d879b097e0ce301f5b5, type: 3}
+  - {fileID: 21300000, guid: 59df10f847e1463ca6ed6205da6dbdf2, type: 3}
+  - {fileID: 21300000, guid: b2c87c998fee4388bb1132c2bc8cf3f1, type: 3}
+  - {fileID: 21300000, guid: f0beb15a437b4aa6aa42d6f864f51b0c, type: 3}
+  - {fileID: 21300000, guid: d3c20c3241fe492da63418ea94b5027f, type: 3}
 --- !u!1 &542641249
 GameObject:
   m_ObjectHideFlags: 0
@@ -4953,6 +4985,14 @@ MonoBehaviour:
   backgroundRenderer: {fileID: 888335259}
   iconRenderer: {fileID: 1808236763}
   iconFill: 0.85
+  emptyBackgroundSprite: {fileID: 21300000, guid: 1dc106d73cfe4e6eb4501ce58a198ce4, type: 3}
+  rarityBackgroundSprites:
+  - {fileID: 21300000, guid: 1dc106d73cfe4e6eb4501ce58a198ce4, type: 3}
+  - {fileID: 21300000, guid: 7f45535b64fd4d879b097e0ce301f5b5, type: 3}
+  - {fileID: 21300000, guid: 59df10f847e1463ca6ed6205da6dbdf2, type: 3}
+  - {fileID: 21300000, guid: b2c87c998fee4388bb1132c2bc8cf3f1, type: 3}
+  - {fileID: 21300000, guid: f0beb15a437b4aa6aa42d6f864f51b0c, type: 3}
+  - {fileID: 21300000, guid: d3c20c3241fe492da63418ea94b5027f, type: 3}
 --- !u!1 &888893104
 GameObject:
   m_ObjectHideFlags: 0
@@ -6692,6 +6732,14 @@ MonoBehaviour:
   backgroundRenderer: {fileID: 1297617304}
   iconRenderer: {fileID: 1988378513}
   iconFill: 0.85
+  emptyBackgroundSprite: {fileID: 21300000, guid: 1dc106d73cfe4e6eb4501ce58a198ce4, type: 3}
+  rarityBackgroundSprites:
+  - {fileID: 21300000, guid: 1dc106d73cfe4e6eb4501ce58a198ce4, type: 3}
+  - {fileID: 21300000, guid: 7f45535b64fd4d879b097e0ce301f5b5, type: 3}
+  - {fileID: 21300000, guid: 59df10f847e1463ca6ed6205da6dbdf2, type: 3}
+  - {fileID: 21300000, guid: b2c87c998fee4388bb1132c2bc8cf3f1, type: 3}
+  - {fileID: 21300000, guid: f0beb15a437b4aa6aa42d6f864f51b0c, type: 3}
+  - {fileID: 21300000, guid: d3c20c3241fe492da63418ea94b5027f, type: 3}
 --- !u!1 &1309204474
 GameObject:
   m_ObjectHideFlags: 0
@@ -6950,6 +6998,14 @@ MonoBehaviour:
   backgroundRenderer: {fileID: 1356414734}
   iconRenderer: {fileID: 270319888}
   iconFill: 0.85
+  emptyBackgroundSprite: {fileID: 21300000, guid: 1dc106d73cfe4e6eb4501ce58a198ce4, type: 3}
+  rarityBackgroundSprites:
+  - {fileID: 21300000, guid: 1dc106d73cfe4e6eb4501ce58a198ce4, type: 3}
+  - {fileID: 21300000, guid: 7f45535b64fd4d879b097e0ce301f5b5, type: 3}
+  - {fileID: 21300000, guid: 59df10f847e1463ca6ed6205da6dbdf2, type: 3}
+  - {fileID: 21300000, guid: b2c87c998fee4388bb1132c2bc8cf3f1, type: 3}
+  - {fileID: 21300000, guid: f0beb15a437b4aa6aa42d6f864f51b0c, type: 3}
+  - {fileID: 21300000, guid: d3c20c3241fe492da63418ea94b5027f, type: 3}
 --- !u!1 &1363358091
 GameObject:
   m_ObjectHideFlags: 0
@@ -7169,8 +7225,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 14
-  m_fontSizeBase: 14
+  m_fontSize: 18
+  m_fontSizeBase: 18
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
@@ -7846,6 +7902,14 @@ MonoBehaviour:
   backgroundRenderer: {fileID: 1698865674}
   iconRenderer: {fileID: 1118181329}
   iconFill: 0.85
+  emptyBackgroundSprite: {fileID: 21300000, guid: 1dc106d73cfe4e6eb4501ce58a198ce4, type: 3}
+  rarityBackgroundSprites:
+  - {fileID: 21300000, guid: 1dc106d73cfe4e6eb4501ce58a198ce4, type: 3}
+  - {fileID: 21300000, guid: 7f45535b64fd4d879b097e0ce301f5b5, type: 3}
+  - {fileID: 21300000, guid: 59df10f847e1463ca6ed6205da6dbdf2, type: 3}
+  - {fileID: 21300000, guid: b2c87c998fee4388bb1132c2bc8cf3f1, type: 3}
+  - {fileID: 21300000, guid: f0beb15a437b4aa6aa42d6f864f51b0c, type: 3}
+  - {fileID: 21300000, guid: d3c20c3241fe492da63418ea94b5027f, type: 3}
 --- !u!1 &1707407319
 GameObject:
   m_ObjectHideFlags: 0
@@ -8114,8 +8178,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 14
-  m_fontSizeBase: 14
+  m_fontSize: 18
+  m_fontSizeBase: 18
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
@@ -8539,6 +8603,14 @@ MonoBehaviour:
   backgroundRenderer: {fileID: 1856002736}
   iconRenderer: {fileID: 100156331}
   iconFill: 0.85
+  emptyBackgroundSprite: {fileID: 21300000, guid: 1dc106d73cfe4e6eb4501ce58a198ce4, type: 3}
+  rarityBackgroundSprites:
+  - {fileID: 21300000, guid: 1dc106d73cfe4e6eb4501ce58a198ce4, type: 3}
+  - {fileID: 21300000, guid: 7f45535b64fd4d879b097e0ce301f5b5, type: 3}
+  - {fileID: 21300000, guid: 59df10f847e1463ca6ed6205da6dbdf2, type: 3}
+  - {fileID: 21300000, guid: b2c87c998fee4388bb1132c2bc8cf3f1, type: 3}
+  - {fileID: 21300000, guid: f0beb15a437b4aa6aa42d6f864f51b0c, type: 3}
+  - {fileID: 21300000, guid: d3c20c3241fe492da63418ea94b5027f, type: 3}
 --- !u!1 &1870963095
 GameObject:
   m_ObjectHideFlags: 0
@@ -8797,6 +8869,14 @@ MonoBehaviour:
   backgroundRenderer: {fileID: 1930989382}
   iconRenderer: {fileID: 935214996}
   iconFill: 0.85
+  emptyBackgroundSprite: {fileID: 21300000, guid: 1dc106d73cfe4e6eb4501ce58a198ce4, type: 3}
+  rarityBackgroundSprites:
+  - {fileID: 21300000, guid: 1dc106d73cfe4e6eb4501ce58a198ce4, type: 3}
+  - {fileID: 21300000, guid: 7f45535b64fd4d879b097e0ce301f5b5, type: 3}
+  - {fileID: 21300000, guid: 59df10f847e1463ca6ed6205da6dbdf2, type: 3}
+  - {fileID: 21300000, guid: b2c87c998fee4388bb1132c2bc8cf3f1, type: 3}
+  - {fileID: 21300000, guid: f0beb15a437b4aa6aa42d6f864f51b0c, type: 3}
+  - {fileID: 21300000, guid: d3c20c3241fe492da63418ea94b5027f, type: 3}
 --- !u!1 &1934589776
 GameObject:
   m_ObjectHideFlags: 0
@@ -9358,6 +9438,14 @@ MonoBehaviour:
   backgroundRenderer: {fileID: 1974646161}
   iconRenderer: {fileID: 2066201212}
   iconFill: 0.85
+  emptyBackgroundSprite: {fileID: 21300000, guid: 1dc106d73cfe4e6eb4501ce58a198ce4, type: 3}
+  rarityBackgroundSprites:
+  - {fileID: 21300000, guid: 1dc106d73cfe4e6eb4501ce58a198ce4, type: 3}
+  - {fileID: 21300000, guid: 7f45535b64fd4d879b097e0ce301f5b5, type: 3}
+  - {fileID: 21300000, guid: 59df10f847e1463ca6ed6205da6dbdf2, type: 3}
+  - {fileID: 21300000, guid: b2c87c998fee4388bb1132c2bc8cf3f1, type: 3}
+  - {fileID: 21300000, guid: f0beb15a437b4aa6aa42d6f864f51b0c, type: 3}
+  - {fileID: 21300000, guid: d3c20c3241fe492da63418ea94b5027f, type: 3}
 --- !u!1 &1988378511
 GameObject:
   m_ObjectHideFlags: 0
@@ -9939,6 +10027,14 @@ MonoBehaviour:
   backgroundRenderer: {fileID: 2131090575}
   iconRenderer: {fileID: 716205831}
   iconFill: 0.85
+  emptyBackgroundSprite: {fileID: 21300000, guid: 1dc106d73cfe4e6eb4501ce58a198ce4, type: 3}
+  rarityBackgroundSprites:
+  - {fileID: 21300000, guid: 1dc106d73cfe4e6eb4501ce58a198ce4, type: 3}
+  - {fileID: 21300000, guid: 7f45535b64fd4d879b097e0ce301f5b5, type: 3}
+  - {fileID: 21300000, guid: 59df10f847e1463ca6ed6205da6dbdf2, type: 3}
+  - {fileID: 21300000, guid: b2c87c998fee4388bb1132c2bc8cf3f1, type: 3}
+  - {fileID: 21300000, guid: f0beb15a437b4aa6aa42d6f864f51b0c, type: 3}
+  - {fileID: 21300000, guid: d3c20c3241fe492da63418ea94b5027f, type: 3}
 --- !u!61 &9000000000
 BoxCollider2D:
   m_ObjectHideFlags: 0
