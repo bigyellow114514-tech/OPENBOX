@@ -1114,6 +1114,7 @@ GameObject:
   - component: {fileID: 200000003}
   - component: {fileID: 200000004}
   - component: {fileID: 200000005}
+  - component: {fileID: 200000006}
   m_Layer: 0
   m_Name: Main_WorldTree
   m_TagString: Untagged
@@ -1255,6 +1256,22 @@ MonoBehaviour:
   - {fileID: 21300000, guid: 7ffee5e2caa507e48a562f710881cc06, type: 3}
   groundYOffset: -3
   boxSizeMultiplier: 0.25
+--- !u!114 &200000006
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 200000001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cb09e066aa9f542479185e9c74f75615, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  bottomOffset: 16
+  panelWidth: 320
+  panelHeight: 72
+  buttonWidth: 110
 --- !u!1 &201257402
 GameObject:
   m_ObjectHideFlags: 0

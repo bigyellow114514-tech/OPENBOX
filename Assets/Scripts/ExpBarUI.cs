@@ -100,31 +100,12 @@ public class ExpBarUI : MonoBehaviour
             fillTex:   _fillTex
         );
 
-        float tStartX = startX + labelW + barW + gap;
-        var   tMgr    = TreeExpManager.Instance;
-
-        if (tMgr != null)
-        {
-            DrawExpBar(
-                x: tStartX, y: barY,
-                labelW: labelW, barW: barW, barH: barH, pad: pad,
-                levelText: tMgr.Level >= 36 ? "树满级" : $"树Lv.{tMgr.Level}",
-                ratio:     tMgr.Level >= 36 ? 1f : tMgr.CurrentExp / tMgr.ExpToNextLevel,
-                barText:   tMgr.Level >= 36 ? "MAX" : $"{tMgr.CurrentExp:0}/{tMgr.ExpToNextLevel:0}",
-                fillTex:   _treeFillTex
-            );
-        }
-        else
-        {
-            DrawExpBar(
-                x: tStartX, y: barY,
-                labelW: labelW, barW: barW, barH: barH, pad: pad,
-                levelText: "树Lv.1",
-                ratio:     0f,
-                barText:   "0/1000",
-                fillTex:   _treeFillTex
-            );
-        }
+        float tStartX  = startX + labelW + barW + gap;
+        var   tMgr     = TreeExpManager.Instance;
+        int   treeLv   = tMgr != null ? tMgr.UpgradeLevel : 1;
+        bool  treeMax  = tMgr != null && tMgr.UpgradeTier >= TreeExpManager.MaxUpgradeTier;
+        string treeLvText = treeMax ? "树满级" : $"树Lv.{treeLv}";
+        GUI.Label(new Rect(tStartX, barY, labelW, barH), treeLvText, _levelStyle);
     }
 
     void DrawExpBar(float x, float y,

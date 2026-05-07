@@ -30,6 +30,17 @@ public class PlayerResourceManager : MonoBehaviour
         OnResourceChanged?.Invoke();
     }
 
+    public bool SpendGold(int amount)
+    {
+        if (amount <= 0 || Gold < amount) return false;
+
+        Gold -= amount;
+        PlayerPrefs.SetInt(KeyGold, Gold);
+        PlayerPrefs.Save();
+        OnResourceChanged?.Invoke();
+        return true;
+    }
+
     public void AddPetTickets(int amount)
     {
         if (amount <= 0) return;
