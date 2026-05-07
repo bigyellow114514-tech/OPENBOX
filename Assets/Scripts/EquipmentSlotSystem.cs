@@ -191,6 +191,7 @@ public class EquipmentSlotSystem : MonoBehaviour
         Save();
         RefreshPlayerAttr();
         OnSlotChanged?.Invoke(index);
+        SFXManager.PlayZhuangbei();
         Debug.Log($"[EquipmentSlotSystem] 装备成功：{item.itemName} → slot {index}（{item.slotName}）");
 
         if (replacedItem != null && !ReferenceEquals(replacedItem, item))
@@ -207,6 +208,7 @@ public class EquipmentSlotSystem : MonoBehaviour
             return;
         }
 
+        SFXManager.PlayFenjie();
         AwardDecomposeReward(item, "分解");
     }
 

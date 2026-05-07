@@ -192,6 +192,7 @@ public class EquipmentCardUI : MonoBehaviour
     void OnCloseButton()
     {
         if (_forced) return;
+        SFXManager.PlayDianji();
         Hide();
     }
 

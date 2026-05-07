@@ -46,6 +46,7 @@ public class EquipmentSlotDisplay : MonoBehaviour
         Vector2 worldPos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
         if (_col != null && _col.OverlapPoint(worldPos))
         {
+            SFXManager.PlayDianji();
             TreeClick.Lock();
             EquipmentCardUI.Instance?.ShowFromSlot(item);
         }

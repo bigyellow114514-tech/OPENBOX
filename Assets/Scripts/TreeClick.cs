@@ -42,6 +42,7 @@ public class TreeClick : MonoBehaviour
             if (PlayerStaminaManager.Instance != null && !PlayerStaminaManager.Instance.TryConsume())
                 return;
 
+            SFXManager.PlayKanshu();
             StartCoroutine(PunchScale());
             SpawnBox();
             PlayerExpManager.Instance?.AddExp(10f);
