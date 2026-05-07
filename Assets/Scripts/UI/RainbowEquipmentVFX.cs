@@ -17,6 +17,7 @@ public class RainbowEquipmentVFX : MonoBehaviour
     void Start()
     {
         ps = GetComponent<ParticleSystem>();
+        ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
 
         // --- Renderer: 软圆形粒子，避免默认白色方块 ---
         var rend = ps.GetComponent<ParticleSystemRenderer>();
@@ -83,6 +84,7 @@ public class RainbowEquipmentVFX : MonoBehaviour
         velocity.enabled = true;
         velocity.x = new ParticleSystem.MinMaxCurve(-0.3f * sizeScale,  0.3f * sizeScale);
         velocity.y = new ParticleSystem.MinMaxCurve( 0.2f * sizeScale,  1.0f * sizeScale);
+        velocity.z = new ParticleSystem.MinMaxCurve(0f, 0f);
         velocity.space = ParticleSystemSimulationSpace.Local;
 
         ps.Play();
