@@ -1,0 +1,44 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6ca1cf44b64e44e42809295f64420dae, type: 3}
+  m_Name: PetHealVFXSettings
+  m_EditorClassIdentifier: 
+  startDelayAfterImpact: 0
+  duration: 0.64
+  fadeInPortion: 0.18
+  fadeOutStart: 0.68
+  outerGlowColor: {r: 0.38, g: 1, b: 0.48, a: 0.26}
+  innerGlowColor: {r: 0.76, g: 1, b: 0.58, a: 0.18}
+  outerGlowWidth: 0.9
+  outerGlowHeight: 0.72
+  innerGlowWidth: 0.54
+  innerGlowHeight: 1.1
+  innerGlowYOffset: -0.08
+  pulseStrength: 0.08
+  pulseFrequency: 4
+  risingParticleCount: 12
+  risingParticleColor: {r: 0.64, g: 1, b: 0.42, a: 0.72}
+  risingMinSideOffset: 0.13
+  risingSideOffsetRange: 0.25
+  risingBottomOffset: 0.08
+  risingTravelHeight: 0.82
+  risingMinSize: 0.035
+  risingMaxSize: 0.085
+  crossEvery: 3
+  orbitSparkCount: 5
+  orbitSparkColor: {r: 0.9, g: 1, b: 0.62, a: 0.82}
+  orbitRadiusX: 0.18
+  orbitRadiusXPulse: 0.05
+  orbitRadiusY: 0.18
+  orbitSparkSize: 0.045
+  orbitSpeed: 1
+  centerY: 0.48

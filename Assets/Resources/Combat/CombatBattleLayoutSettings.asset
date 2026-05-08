@@ -1,0 +1,48 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a84a58000418fad40a218b6a98ee8dfe, type: 3}
+  m_Name: CombatBattleLayoutSettings
+  m_EditorClassIdentifier: 
+  panelSize: {x: 12.5, y: 7}
+  arenaPadding: {x: 0.34, y: 0.86}
+  arenaBottomPadding: 0.72
+  unitWidthRatio: 0.24
+  unitHeightRatio: 0.68
+  playerUnitSizeScale: 1
+  enemyUnitSizeScale: 1.25
+  playerXRatio: 0.22
+  enemyXRatio: 0.72
+  unitBottomRatio: 0.08
+  unitPivotHeight: 0.46
+  petSizeRatio: 0.725
+  playerPetOffset: {x: -0.6, y: 0.2}
+  enemyPetOffset: {x: 0.6, y: 0.2}
+  canvasPanelSize: {x: 900, y: 560}
+  titlePosition: {x: 0, y: 226}
+  roundPosition: {x: 0, y: 198}
+  speedStartPosition: {x: -362, y: 196}
+  speedStep: {x: 64, y: 0}
+  speedButtonSize: {x: 58, y: 30}
+  playerHpTextPosition: {x: -230, y: 158}
+  playerHpBarPosition: {x: -205, y: 132}
+  enemyHpTextPosition: {x: 205, y: 158}
+  enemyHpBarPosition: {x: 230, y: 132}
+  hpBarSize: {x: 285, y: 20}
+  actionButtonPosition: {x: 378, y: -230}
+  resultTextPosition: {x: -160, y: -230}
+  titleFontSize: 30
+  roundFontSize: 20
+  hpFontSize: 19
+  speedFontSize: 17
+  actionFontSize: 19
+  resultFontSize: 20
+  floatingFontSize: 34

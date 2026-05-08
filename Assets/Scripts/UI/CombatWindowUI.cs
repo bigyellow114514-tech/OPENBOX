@@ -5,10 +5,11 @@ public class CombatWindowUI : MonoBehaviour
 {
     public bool IsOpen => _isOpen;
 
+    [SerializeField] bool useSceneObjectBattleView = true;
     [SerializeField] Sprite playerSprite = null;
     [SerializeField] Sprite enemySprite = null;
     [SerializeField] Sprite playerAttackSheet = null;
-    [SerializeField] Sprite playerAttackedSheet = null;
+    [SerializeField] CombatHealVFXSettings healVFXSettings = null;
     [SerializeField] int animationColumns = 4;
     [SerializeField] int animationRows = 2;
     [SerializeField] int animationFrameCount = 8;
@@ -26,12 +27,17 @@ public class CombatWindowUI : MonoBehaviour
     float _eventStartTime;
     float _deathStartTime;
     float _battleSpeed = 1f;
+    CombatSceneBattleView _sceneView;
+    CombatBattleOverlayCanvas _overlayCanvas;
 
     Texture2D _panelTex;
     Texture2D _barBgTex;
     Texture2D _playerHpTex;
     Texture2D _enemyHpTex;
     Texture2D _buffTex;
+    Texture2D _healGlowTex;
+    Texture2D _healSparkTex;
+    Texture2D _healCrossTex;
     Texture2D _stunBuffSheet;
 
     GUIStyle _titleStyle;
@@ -52,13 +58,13 @@ public class CombatWindowUI : MonoBehaviour
     const float PlayerSheetFrameScale = 1.5f;
     const float PlayerBaselineYOffset = 0.16f;
     const float PlayerIdleYOffset = -0.1f;
-    const float PlayerAttackedYOffset = 0.16f;
     const int StunBuffColumns = 3;
     const float StunBuffFps = 8f;
 
     public void Open(StageData stage, CombatResult result)
     {
         ResolveUnitSprites();
+        EnsureSceneView();
 
         _stage = stage;
         _result = result;
@@ -73,40 +79,57 @@ public class CombatWindowUI : MonoBehaviour
         _eventStartTime = Time.unscaledTime;
         _deathStartTime = 0f;
         _battleSpeed = 1f;
+
+        if (useSceneObjectBattleView)
+        {
+            _sceneView.Open(stage, result);
+            _overlayCanvas.Open(stage, result);
+            _sceneView.SetBattleSpeed(_battleSpeed);
+            PushSceneViewState();
+        }
     }
 
     void Update()
     {
-        if (!_isOpen || _result == null || _showResult) return;
-
-        if (_playingEnemyDeath)
-        {
-            if (Time.unscaledTime - _deathStartTime >= ScaledDuration(EnemyDeathDuration))
-                _showResult = true;
+        if (!_isOpen || _result == null)
             return;
-        }
 
-        if (Time.unscaledTime - _eventStartTime < ScaledDuration(EventDuration)) return;
-
-        _eventIndex++;
-        _eventStartTime = Time.unscaledTime;
-
-        if (_eventIndex >= _result.Logs.Count)
+        if (!_showResult)
         {
-            if (_result.PlayerWon && _monsterAnimations != null && _monsterAnimations.HasDeath)
+            if (_playingEnemyDeath)
             {
-                _playingEnemyDeath = true;
-                _deathStartTime = Time.unscaledTime;
+                if (Time.unscaledTime - _deathStartTime >= ScaledDuration(EnemyDeathDuration))
+                    _showResult = true;
             }
-            else
+            else if (Time.unscaledTime - _eventStartTime >= ScaledDuration(EventDuration))
             {
-                _showResult = true;
+                _eventIndex++;
+                _eventStartTime = Time.unscaledTime;
+
+                if (_eventIndex >= _result.Logs.Count)
+                {
+                    if (_result.PlayerWon && _monsterAnimations != null && _monsterAnimations.HasDeath)
+                    {
+                        _playingEnemyDeath = true;
+                        _deathStartTime = Time.unscaledTime;
+                    }
+                    else
+                    {
+                        _showResult = true;
+                    }
+                }
             }
         }
+
+        if (useSceneObjectBattleView)
+            PushSceneViewState();
     }
 
     void OnGUI()
     {
+        if (useSceneObjectBattleView)
+            return;
+
         if (!_isOpen || _stage == null || _result == null) return;
         InitStyles();
 
@@ -142,17 +165,65 @@ public class CombatWindowUI : MonoBehaviour
         }
     }
 
+    void DrawSceneBattleOverlay()
+    {
+        if (!_isOpen || _stage == null || _result == null) return;
+        InitStyles();
+
+        float w = Mathf.Min(Screen.width * 0.82f, 900f);
+        float h = Mathf.Min(Screen.height * 0.78f, 600f);
+        float x = (Screen.width - w) * 0.5f;
+        float y = (Screen.height - h) * 0.5f;
+        Rect arena = new Rect(x + 28f, y + 72f, w - 56f, h - 156f);
+
+        float progress = CurrentProgress();
+        float playerHp = CurrentPlayerHp(progress);
+        float enemyHp = CurrentEnemyHp(progress);
+        Rect playerHome = CharacterRect(arena, true);
+        Rect enemyHome = CharacterRect(arena, false);
+
+        GUI.Label(new Rect(x + 16f, y + 14f, w - 32f, 30f), _stage.StageName, _titleStyle);
+        GUI.Label(new Rect(x + 16f, y + 40f, w - 32f, 22f), RoundText(), _roundStyle);
+        DrawSpeedButtons(new Rect(x + 28f, y + 42f, 214f, 26f));
+
+        DrawHpBlock(new Rect(playerHome.x, arena.y, playerHome.width, 48f), "Player", playerHp, _result.PlayerMaxHp, _playerHpTex);
+        DrawHpBlock(new Rect(enemyHome.x, arena.y, enemyHome.width, 48f), "Enemy", enemyHp, _result.EnemyMaxHp, _enemyHpTex);
+
+        CombatLogEntry current = CurrentEvent();
+        if (current != null)
+        {
+            Rect playerRect = playerHome;
+            Rect enemyRect = enemyHome;
+            Rect playerPetRect = PetRect(playerHome, true);
+            Rect enemyPetRect = PetRect(enemyHome, false);
+            DrawEventText(current, progress, playerRect, enemyRect, playerPetRect, enemyPetRect);
+        }
+
+        if (_showResult)
+        {
+            DrawResult(x + 28f, y + h - 66f, w - 56f);
+        }
+        else if (!_playingEnemyDeath && GUI.Button(new Rect(x + w - 126f, y + h - 50f, 98f, 32f), "Skip", _buttonStyle))
+        {
+            SkipToResult();
+        }
+    }
+
     void InitStyles()
     {
         if (_panelTex != null) return;
 
         ResolveUnitSprites();
+        ResolveVFXSettings();
 
         _panelTex = MakeTex(new Color(0.05f, 0.06f, 0.07f, 0.94f));
         _barBgTex = MakeTex(new Color(0.12f, 0.12f, 0.12f, 1f));
         _playerHpTex = MakeTex(new Color(0.16f, 0.72f, 0.32f, 1f));
         _enemyHpTex = MakeTex(new Color(0.86f, 0.22f, 0.18f, 1f));
         _buffTex = MakeTex(new Color(0.95f, 0.72f, 0.12f, 1f));
+        _healGlowTex = MakeRadialTex(96, 0.18f);
+        _healSparkTex = MakeRadialTex(32, 0.42f);
+        _healCrossTex = MakeCrossTex(32);
         _stunBuffSheet = Resources.Load<Texture2D>("Sprites/Buff/Buff_Stun");
         _titleStyle = new GUIStyle(GUI.skin.label)
         {
@@ -202,8 +273,76 @@ public class CombatWindowUI : MonoBehaviour
         if (playerAttackSheet == null)
             playerAttackSheet = Resources.Load<Sprite>("Sprites/knight_attack");
 
-        if (playerAttackedSheet == null)
-            playerAttackedSheet = Resources.Load<Sprite>("Sprites/knight_attacked");
+    }
+
+    void ResolveVFXSettings()
+    {
+        if (healVFXSettings == null)
+            healVFXSettings = CombatHealVFXSettings.LoadDefault();
+    }
+
+    void EnsureSceneView()
+    {
+        if (_sceneView != null) return;
+
+        _sceneView = new CombatSceneBattleView(this);
+        _sceneView.SkipRequested += SkipToResult;
+        _sceneView.ReturnRequested += CloseAndApply;
+        _sceneView.SpeedRequested += SetBattleSpeed;
+
+        _overlayCanvas = new CombatBattleOverlayCanvas();
+        _overlayCanvas.SkipRequested += SkipToResult;
+        _overlayCanvas.ReturnRequested += CloseAndApply;
+        _overlayCanvas.SpeedRequested += SetBattleSpeed;
+    }
+
+    void PushSceneViewState()
+    {
+        if (_sceneView == null || _stage == null || _result == null) return;
+
+        float progress = CurrentProgress();
+        _sceneView.UpdateView(
+            CurrentEvent(),
+            _eventIndex,
+            progress,
+            _showResult,
+            _playingEnemyDeath,
+            DeathProgress(),
+            CurrentRound(),
+            CurrentPlayerHp(progress),
+            CurrentEnemyHp(progress));
+
+        _overlayCanvas?.UpdateView(
+            CurrentEvent(),
+            _eventIndex,
+            progress,
+            _showResult,
+            _playingEnemyDeath,
+            CurrentRound(),
+            CurrentPlayerHp(progress),
+            CurrentEnemyHp(progress));
+    }
+
+    void SkipToResult()
+    {
+        if (_result == null || _showResult) return;
+
+        _eventIndex = _result.Logs.Count;
+        if (_result.PlayerWon && _monsterAnimations != null && _monsterAnimations.HasDeath)
+        {
+            _playingEnemyDeath = true;
+            _deathStartTime = Time.unscaledTime;
+        }
+        else
+        {
+            _showResult = true;
+        }
+    }
+
+    void SetBattleSpeed(float speed)
+    {
+        _battleSpeed = Mathf.Max(0.01f, speed);
+        _sceneView?.SetBattleSpeed(_battleSpeed);
     }
 
     Sprite FindChildSprite(string childName)
@@ -259,10 +398,10 @@ public class CombatWindowUI : MonoBehaviour
         DrawHpBlock(new Rect(playerHome.x, arena.y, playerHome.width, 48f), "Player", playerHp, _result.PlayerMaxHp, _playerHpTex);
         DrawHpBlock(new Rect(enemyHome.x, arena.y, enemyHome.width, 48f), "Enemy", enemyHp, _result.EnemyMaxHp, _enemyHpTex);
 
-        DrawPlayerCharacter(playerRect, current, progress);
-        DrawEnemyCharacter(enemyRect, current, progress);
         DrawPetCharacter(playerPetRect, _playerPetAnimations, current, progress, true);
         DrawPetCharacter(enemyPetRect, _enemyPetAnimations, current, progress, false);
+        DrawPlayerCharacter(playerRect, current, progress);
+        DrawEnemyCharacter(enemyRect, current, progress);
 
         bool playerStunned = current != null ? current.PlayerStunned : LastPlayerStunned();
         bool enemyStunned = current != null ? current.EnemyStunned : LastEnemyStunned();
@@ -270,7 +409,10 @@ public class CombatWindowUI : MonoBehaviour
         if (enemyStunned) DrawStunBuff(enemyRect);
 
         if (current != null)
+        {
+            DrawHealVFX(current, progress, playerRect, enemyRect);
             DrawEventText(current, progress, playerRect, enemyRect, playerPetRect, enemyPetRect);
+        }
     }
 
     Rect CharacterRect(Rect arena, bool player)
@@ -287,9 +429,8 @@ public class CombatWindowUI : MonoBehaviour
     Rect PetRect(Rect ownerRect, bool player)
     {
         float size = ownerRect.width / 3f;
-        float x = player ? ownerRect.x - size * 0.45f : ownerRect.xMax - size * 0.55f;
-        float ownerBottom = player ? ownerRect.yMax + ownerRect.height * PlayerIdleYOffset : ownerRect.yMax;
-        float y = ownerBottom - size;
+        float x = player ? ownerRect.x - size * 0.65f : ownerRect.xMax - size * 0.35f;
+        float y = ownerRect.y + ownerRect.height * 0.58f - size * 0.5f;
         return new Rect(x, y, size, size);
     }
 
@@ -360,9 +501,9 @@ public class CombatWindowUI : MonoBehaviour
                 return;
             }
 
-            if (current.TargetIsPlayer && playerAttackedSheet != null && !current.Dodged)
+            if (current.TargetIsPlayer && !current.Dodged)
             {
-                DrawPlayerSheetFrame(OffsetRectY(rect, rect.height * PlayerAttackedYOffset), playerAttackedSheet, AnimationFrame(progress), false);
+                DrawPlayerHurt(rect, progress);
                 return;
             }
         }
@@ -373,6 +514,16 @@ public class CombatWindowUI : MonoBehaviour
     void DrawPlayerIdle(Rect rect)
     {
         DrawCharacter(OffsetRectY(rect, rect.height * PlayerIdleYOffset), playerSprite, false);
+    }
+
+    void DrawPlayerHurt(Rect rect, float progress)
+    {
+        float pulse = HurtPulse(progress);
+        Rect hurtRect = HurtRect(OffsetRectY(rect, rect.height * PlayerIdleYOffset), pulse);
+        Color oldColor = GUI.color;
+        GUI.color = Color.Lerp(Color.white, new Color(1f, 0.42f, 0.42f, 1f), pulse);
+        DrawCharacter(hurtRect, playerSprite, false);
+        GUI.color = oldColor;
     }
 
     void DrawEnemyCharacter(Rect rect, CombatLogEntry current, float progress)
@@ -395,7 +546,51 @@ public class CombatWindowUI : MonoBehaviour
             return;
         }
 
+        if (EnemyShouldShowHurt(current))
+        {
+            DrawEnemyHurt(rect, progress);
+            return;
+        }
+
+        DrawEnemyIdle(rect);
+    }
+
+    bool EnemyShouldShowHurt(CombatLogEntry current)
+    {
+        if (current == null || current.TargetIsPlayer || current.Dodged)
+            return false;
+        if (current.Type == CombatEventType.Attack)
+            return true;
+        return current.Type == CombatEventType.PetSkill && current.Damage > 0f;
+    }
+
+    void DrawEnemyIdle(Rect rect)
+    {
         DrawAnimationFrame(rect, _monsterAnimations.Idle, LoopFrame(_monsterAnimations.Idle, EnemyIdleFps), false);
+    }
+
+    void DrawEnemyHurt(Rect rect, float progress)
+    {
+        float pulse = HurtPulse(progress);
+        Rect hurtRect = HurtRect(rect, pulse);
+        Color oldColor = GUI.color;
+        GUI.color = Color.Lerp(Color.white, new Color(1f, 0.42f, 0.42f, 1f), pulse);
+        DrawEnemyIdle(hurtRect);
+        GUI.color = oldColor;
+    }
+
+    float HurtPulse(float progress)
+    {
+        return 1f - Mathf.Clamp01(Mathf.Abs(Mathf.Clamp01(progress) - 0.18f) / 0.18f);
+    }
+
+    Rect HurtRect(Rect rect, float pulse)
+    {
+        return new Rect(
+            rect.x - rect.width * pulse * 0.02f,
+            rect.y + rect.height * pulse * 0.03f,
+            rect.width * (1f + pulse * 0.04f),
+            rect.height * (1f - pulse * 0.06f));
     }
 
     void DrawPetCharacter(Rect rect, PetAnimationSet animations, CombatLogEntry current, float progress, bool playerSide)
@@ -441,6 +636,12 @@ public class CombatWindowUI : MonoBehaviour
 
         float progress = Mathf.Clamp01((Time.unscaledTime - _deathStartTime) / ScaledDuration(EnemyDeathDuration));
         return ProgressFrame(_monsterAnimations.Die, progress);
+    }
+
+    float DeathProgress()
+    {
+        if (!_playingEnemyDeath) return 0f;
+        return Mathf.Clamp01((Time.unscaledTime - _deathStartTime) / ScaledDuration(EnemyDeathDuration));
     }
 
     int ProgressFrame(Sprite[] frames, float progress)
@@ -586,6 +787,72 @@ public class CombatWindowUI : MonoBehaviour
         GUI.DrawTextureWithTexCoords(icon, _stunBuffSheet, uv, true);
     }
 
+    void DrawHealVFX(CombatLogEntry entry, float progress, Rect playerRect, Rect enemyRect)
+    {
+        if (entry == null || entry.Type != CombatEventType.PetSkill || entry.Heal <= 0f)
+            return;
+
+        CombatHealVFXSettings vfx = healVFXSettings != null ? healVFXSettings : CombatHealVFXSettings.LoadDefault();
+        float t = Mathf.Clamp01((progress - AttackReachTime - vfx.startDelayAfterImpact) / vfx.duration);
+        if (t <= 0f || t >= 1f)
+            return;
+
+        Rect target = entry.ActorIsPlayer ? playerRect : enemyRect;
+        float fadeIn = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(t / vfx.fadeInPortion));
+        float fadeOut = 1f - Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((t - vfx.fadeOutStart) / (1f - vfx.fadeOutStart)));
+        float alpha = fadeIn * fadeOut;
+
+        Color oldColor = GUI.color;
+        Vector2 center = new Vector2(target.center.x, target.y + target.height * vfx.centerY);
+        float pulse = 1f + Mathf.Sin(t * Mathf.PI * vfx.pulseFrequency) * vfx.pulseStrength;
+
+        GUI.color = WithAlpha(vfx.outerGlowColor, vfx.outerGlowColor.a * alpha);
+        DrawCenteredTexture(_healGlowTex, center, target.width * vfx.outerGlowWidth * pulse, target.height * vfx.outerGlowHeight * pulse);
+
+        GUI.color = WithAlpha(vfx.innerGlowColor, vfx.innerGlowColor.a * alpha);
+        DrawCenteredTexture(_healGlowTex, center + new Vector2(0f, target.height * vfx.innerGlowYOffset), target.width * vfx.innerGlowWidth, target.height * vfx.innerGlowHeight);
+
+        for (int i = 0; i < vfx.risingParticleCount; i++)
+        {
+            float seed = Mathf.Repeat((_eventIndex + 1) * 0.173f + i * 0.317f, 1f);
+            float life = Mathf.Repeat(t + seed, 1f);
+            float side = Mathf.Sin((seed * 11.7f + t * 1.6f) * Mathf.PI * 2f);
+            float x = center.x + side * target.width * (vfx.risingMinSideOffset + seed * vfx.risingSideOffsetRange);
+            float y = target.yMax - target.height * (vfx.risingBottomOffset + life * vfx.risingTravelHeight);
+            float size = Mathf.Lerp(target.width * vfx.risingMinSize, target.width * vfx.risingMaxSize, seed);
+            float particleAlpha = alpha * Mathf.Sin(life * Mathf.PI);
+
+            GUI.color = WithAlpha(vfx.risingParticleColor, vfx.risingParticleColor.a * particleAlpha);
+            DrawCenteredTexture(i % vfx.crossEvery == 0 ? _healCrossTex : _healSparkTex, new Vector2(x, y), size, size);
+        }
+
+        for (int i = 0; i < vfx.orbitSparkCount; i++)
+        {
+            float orbit = t * Mathf.PI * 2f * vfx.orbitSpeed + i * Mathf.PI * 2f / Mathf.Max(1, vfx.orbitSparkCount);
+            float radiusX = target.width * (vfx.orbitRadiusX + vfx.orbitRadiusXPulse * Mathf.Sin(t * Mathf.PI));
+            float radiusY = target.height * vfx.orbitRadiusY;
+            Vector2 pos = center + new Vector2(Mathf.Cos(orbit) * radiusX, Mathf.Sin(orbit) * radiusY);
+            float size = target.width * vfx.orbitSparkSize;
+
+            GUI.color = WithAlpha(vfx.orbitSparkColor, vfx.orbitSparkColor.a * alpha);
+            DrawCenteredTexture(_healSparkTex, pos, size, size);
+        }
+
+        GUI.color = oldColor;
+    }
+
+    void DrawCenteredTexture(Texture2D tex, Vector2 center, float width, float height)
+    {
+        if (tex == null) return;
+        GUI.DrawTexture(new Rect(center.x - width * 0.5f, center.y - height * 0.5f, width, height), tex);
+    }
+
+    Color WithAlpha(Color color, float alpha)
+    {
+        color.a = alpha;
+        return color;
+    }
+
     void DrawEventText(CombatLogEntry entry, float progress, Rect playerRect, Rect enemyRect, Rect playerPetRect, Rect enemyPetRect)
     {
         if ((entry.Type == CombatEventType.Attack || entry.Type == CombatEventType.PetSkill) && progress < AttackReachTime)
@@ -700,6 +967,8 @@ public class CombatWindowUI : MonoBehaviour
         _monsterAnimations = null;
         _playerPetAnimations = null;
         _enemyPetAnimations = null;
+        _sceneView?.Close();
+        _overlayCanvas?.Close();
     }
 
     CombatLogEntry CurrentEvent()
@@ -807,6 +1076,54 @@ public class CombatWindowUI : MonoBehaviour
     {
         var tex = new Texture2D(1, 1);
         tex.SetPixel(0, 0, color);
+        tex.Apply();
+        return tex;
+    }
+
+    Texture2D MakeRadialTex(int size, float hardness)
+    {
+        var tex = new Texture2D(size, size, TextureFormat.ARGB32, false);
+        float center = (size - 1) * 0.5f;
+        float radius = Mathf.Max(1f, center);
+        hardness = Mathf.Clamp01(hardness);
+
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                float dx = (x - center) / radius;
+                float dy = (y - center) / radius;
+                float dist = Mathf.Sqrt(dx * dx + dy * dy);
+                float alpha = Mathf.Clamp01(1f - dist);
+                alpha = Mathf.Pow(alpha, Mathf.Lerp(3.2f, 0.8f, hardness));
+                tex.SetPixel(x, y, new Color(1f, 1f, 1f, alpha));
+            }
+        }
+
+        tex.Apply();
+        return tex;
+    }
+
+    Texture2D MakeCrossTex(int size)
+    {
+        var tex = new Texture2D(size, size, TextureFormat.ARGB32, false);
+        float center = (size - 1) * 0.5f;
+        float arm = size * 0.12f;
+        float length = size * 0.34f;
+
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                float dx = Mathf.Abs(x - center);
+                float dy = Mathf.Abs(y - center);
+                bool inside = (dx <= arm && dy <= length) || (dy <= arm && dx <= length);
+                float edge = Mathf.Min(Mathf.Abs(dx - arm), Mathf.Abs(dy - arm));
+                float alpha = inside ? Mathf.Clamp01(0.85f + edge / Mathf.Max(1f, arm) * 0.15f) : 0f;
+                tex.SetPixel(x, y, new Color(1f, 1f, 1f, alpha));
+            }
+        }
+
         tex.Apply();
         return tex;
     }
