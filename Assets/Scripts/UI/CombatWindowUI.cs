@@ -16,6 +16,8 @@ public class CombatWindowUI : MonoBehaviour
     StageData _stage;
     CombatResult _result;
     MonsterAnimationSet _monsterAnimations;
+    PetAnimationSet _playerPetAnimations;
+    PetAnimationSet _enemyPetAnimations;
     bool _isOpen;
     bool _showResult;
     bool _playingEnemyDeath;
@@ -23,6 +25,7 @@ public class CombatWindowUI : MonoBehaviour
     int _eventIndex;
     float _eventStartTime;
     float _deathStartTime;
+    float _battleSpeed = 1f;
 
     Texture2D _panelTex;
     Texture2D _barBgTex;
@@ -43,7 +46,9 @@ public class CombatWindowUI : MonoBehaviour
     const float AttackReachTime = 0.18f;
     const float AttackReturnTime = 0.42f;
     const float EnemyIdleFps = 16f;
+    const float PetIdleFps = 12f;
     const float EnemyDeathDuration = 0.9f;
+    const float BaseSpeedScale = 1.3f;
     const float PlayerSheetFrameScale = 1.5f;
     const float PlayerBaselineYOffset = 0.16f;
     const float PlayerIdleYOffset = -0.1f;
@@ -58,6 +63,8 @@ public class CombatWindowUI : MonoBehaviour
         _stage = stage;
         _result = result;
         _monsterAnimations = MonsterAnimationSet.Load(stage != null ? stage.MonsterAvatar : "");
+        _playerPetAnimations = PetAnimationSet.Load(result != null ? result.PlayerPetResource : "");
+        _enemyPetAnimations = PetAnimationSet.Load(result != null ? result.EnemyPetResource : "");
         _isOpen = true;
         _showResult = result.Logs.Count == 0;
         _playingEnemyDeath = false;
@@ -65,6 +72,7 @@ public class CombatWindowUI : MonoBehaviour
         _eventIndex = 0;
         _eventStartTime = Time.unscaledTime;
         _deathStartTime = 0f;
+        _battleSpeed = 1f;
     }
 
     void Update()
@@ -73,12 +81,12 @@ public class CombatWindowUI : MonoBehaviour
 
         if (_playingEnemyDeath)
         {
-            if (Time.unscaledTime - _deathStartTime >= EnemyDeathDuration)
+            if (Time.unscaledTime - _deathStartTime >= ScaledDuration(EnemyDeathDuration))
                 _showResult = true;
             return;
         }
 
-        if (Time.unscaledTime - _eventStartTime < EventDuration) return;
+        if (Time.unscaledTime - _eventStartTime < ScaledDuration(EventDuration)) return;
 
         _eventIndex++;
         _eventStartTime = Time.unscaledTime;
@@ -112,6 +120,7 @@ public class CombatWindowUI : MonoBehaviour
 
         GUI.Label(new Rect(x + 16f, y + 14f, w - 32f, 30f), _stage.StageName, _titleStyle);
         GUI.Label(new Rect(x + 16f, y + 40f, w - 32f, 22f), RoundText(), _roundStyle);
+        DrawSpeedButtons(new Rect(x + 28f, y + 42f, 214f, 26f));
 
         Rect arena = new Rect(x + 28f, y + 72f, w - 56f, h - 156f);
         DrawArena(arena);
@@ -216,8 +225,12 @@ public class CombatWindowUI : MonoBehaviour
 
         Rect playerHome = CharacterRect(arena, true);
         Rect enemyHome = CharacterRect(arena, false);
+        Rect playerPetHome = PetRect(playerHome, true);
+        Rect enemyPetHome = PetRect(enemyHome, false);
         Rect playerRect = playerHome;
         Rect enemyRect = enemyHome;
+        Rect playerPetRect = playerPetHome;
+        Rect enemyPetRect = enemyPetHome;
 
         if (current != null && current.Type == CombatEventType.Attack)
         {
@@ -229,12 +242,27 @@ public class CombatWindowUI : MonoBehaviour
             else
                 enemyRect.x -= distance * move;
         }
+        else if (current != null && current.Type == CombatEventType.PetSkill)
+        {
+            float move = AttackOffset(progress);
+            float distance = arena.width * 0.18f;
+
+            if (PetShouldMoveForSkill(current))
+            {
+                if (current.PetActorIsPlayer)
+                    playerPetRect.x += distance * move;
+                else
+                    enemyPetRect.x -= distance * move;
+            }
+        }
 
         DrawHpBlock(new Rect(playerHome.x, arena.y, playerHome.width, 48f), "Player", playerHp, _result.PlayerMaxHp, _playerHpTex);
         DrawHpBlock(new Rect(enemyHome.x, arena.y, enemyHome.width, 48f), "Enemy", enemyHp, _result.EnemyMaxHp, _enemyHpTex);
 
         DrawPlayerCharacter(playerRect, current, progress);
         DrawEnemyCharacter(enemyRect, current, progress);
+        DrawPetCharacter(playerPetRect, _playerPetAnimations, current, progress, true);
+        DrawPetCharacter(enemyPetRect, _enemyPetAnimations, current, progress, false);
 
         bool playerStunned = current != null ? current.PlayerStunned : LastPlayerStunned();
         bool enemyStunned = current != null ? current.EnemyStunned : LastEnemyStunned();
@@ -242,7 +270,7 @@ public class CombatWindowUI : MonoBehaviour
         if (enemyStunned) DrawStunBuff(enemyRect);
 
         if (current != null)
-            DrawEventText(current, progress, playerRect, enemyRect);
+            DrawEventText(current, progress, playerRect, enemyRect, playerPetRect, enemyPetRect);
     }
 
     Rect CharacterRect(Rect arena, bool player)
@@ -256,6 +284,15 @@ public class CombatWindowUI : MonoBehaviour
         return new Rect(x, y, size, size);
     }
 
+    Rect PetRect(Rect ownerRect, bool player)
+    {
+        float size = ownerRect.width / 3f;
+        float x = player ? ownerRect.x - size * 0.45f : ownerRect.xMax - size * 0.55f;
+        float ownerBottom = player ? ownerRect.yMax + ownerRect.height * PlayerIdleYOffset : ownerRect.yMax;
+        float y = ownerBottom - size;
+        return new Rect(x, y, size, size);
+    }
+
     void DrawHpBlock(Rect rect, string name, float hp, float maxHp, Texture2D hpTex)
     {
         GUI.Label(new Rect(rect.x, rect.y, rect.width, 22f),
@@ -265,6 +302,29 @@ public class CombatWindowUI : MonoBehaviour
         GUI.DrawTexture(new Rect(rect.x, rect.y + 26f, rect.width, 18f), _barBgTex);
         float pct = maxHp > 0f ? Mathf.Clamp01(hp / maxHp) : 0f;
         GUI.DrawTexture(new Rect(rect.x, rect.y + 26f, rect.width * pct, 18f), hpTex);
+    }
+
+    void DrawSpeedButtons(Rect rect)
+    {
+        float[] speeds = { 0.2f, 0.5f, 1f, 2f };
+        float buttonWidth = rect.width / speeds.Length;
+
+        for (int i = 0; i < speeds.Length; i++)
+        {
+            float speed = speeds[i];
+            Rect buttonRect = new Rect(rect.x + buttonWidth * i, rect.y, buttonWidth - 4f, rect.height);
+            bool selected = Mathf.Approximately(_battleSpeed, speed);
+            string label = speed.ToString("0.##") + "x";
+
+            Color oldColor = GUI.color;
+            if (selected)
+                GUI.color = new Color(0.7f, 0.9f, 1f, 1f);
+
+            if (GUI.Button(buttonRect, label, _buttonStyle))
+                _battleSpeed = speed;
+
+            GUI.color = oldColor;
+        }
     }
 
     void DrawCharacter(Rect rect, Sprite sprite, bool flip)
@@ -338,12 +398,48 @@ public class CombatWindowUI : MonoBehaviour
         DrawAnimationFrame(rect, _monsterAnimations.Idle, LoopFrame(_monsterAnimations.Idle, EnemyIdleFps), false);
     }
 
+    void DrawPetCharacter(Rect rect, PetAnimationSet animations, CombatLogEntry current, float progress, bool playerSide)
+    {
+        if (animations == null)
+            return;
+
+        bool attacking = current != null
+            && current.Type == CombatEventType.PetSkill
+            && current.PetActorIsPlayer == playerSide;
+        bool flip = playerSide;
+
+        if (attacking)
+        {
+            DrawPetAnimationFrame(rect, animations, animations.Attack, ProgressFrame(animations.Attack, progress), flip);
+            return;
+        }
+
+        DrawPetAnimationFrame(rect, animations, animations.Idle, LoopFrame(animations.Idle, PetIdleFps), flip);
+    }
+
+    void DrawPetAnimationFrame(Rect rect, PetAnimationSet animations, Sprite[] frames, int frameIndex, bool flip)
+    {
+        if (frames == null || frames.Length == 0)
+        {
+            if (animations.Idle != null && animations.Idle.Length > 0)
+                DrawSprite(rect, animations.Idle[0], flip);
+            return;
+        }
+
+        DrawSprite(rect, frames[Mathf.Clamp(frameIndex, 0, frames.Length - 1)], flip);
+    }
+
+    bool PetShouldMoveForSkill(CombatLogEntry entry)
+    {
+        return entry != null && entry.PetId != 102;
+    }
+
     int DeathFrame()
     {
         if (_monsterAnimations == null || _monsterAnimations.Die == null || _monsterAnimations.Die.Length == 0)
             return 0;
 
-        float progress = Mathf.Clamp01((Time.unscaledTime - _deathStartTime) / EnemyDeathDuration);
+        float progress = Mathf.Clamp01((Time.unscaledTime - _deathStartTime) / ScaledDuration(EnemyDeathDuration));
         return ProgressFrame(_monsterAnimations.Die, progress);
     }
 
@@ -490,37 +586,81 @@ public class CombatWindowUI : MonoBehaviour
         GUI.DrawTextureWithTexCoords(icon, _stunBuffSheet, uv, true);
     }
 
-    void DrawEventText(CombatLogEntry entry, float progress, Rect playerRect, Rect enemyRect)
+    void DrawEventText(CombatLogEntry entry, float progress, Rect playerRect, Rect enemyRect, Rect playerPetRect, Rect enemyPetRect)
     {
-        if (entry.Type == CombatEventType.Attack && progress < AttackReachTime)
+        if ((entry.Type == CombatEventType.Attack || entry.Type == CombatEventType.PetSkill) && progress < AttackReachTime)
             return;
 
         Rect actor = entry.ActorIsPlayer ? playerRect : enemyRect;
         Rect target = entry.TargetIsPlayer ? playerRect : enemyRect;
+        if (entry.Type == CombatEventType.PetSkill)
+            actor = entry.PetActorIsPlayer ? playerPetRect : enemyPetRect;
         float lift = Mathf.Sin(Mathf.Clamp01(progress) * Mathf.PI) * 34f;
         float alpha = 1f - Mathf.Clamp01((progress - 0.62f) / 0.38f);
 
         if (entry.Type == CombatEventType.Popup)
         {
-            string text = entry.Combo ? "Combo" : entry.Text;
+            string text = entry.Combo ? "连击" : LocalizePopupText(entry.Text);
             DrawFloatingText(text, actor.center.x, actor.y - lift, alpha, _popupStyle);
             return;
         }
 
         if (entry.Dodged)
-            DrawFloatingText("Dodge", target.center.x, target.y - lift, alpha, _popupStyle);
+            DrawFloatingText("闪避", target.center.x, target.y - lift, alpha, _popupStyle);
 
         if (entry.Crit)
-            DrawFloatingText("Crit", target.center.x, target.y + 18f - lift, alpha, _popupStyle);
+            DrawFloatingText("暴击", target.center.x, target.y + 18f - lift, alpha, _popupStyle);
 
         if (entry.Stunned)
-            DrawFloatingText("Stun", target.center.x, target.y + 46f - lift, alpha, _popupStyle);
+            DrawFloatingText("击晕", target.center.x, target.y + 46f - lift, alpha, _popupStyle);
 
         if (entry.Damage > 0f)
             DrawFloatingText("-" + entry.Damage.ToString("0"), target.center.x, target.y + target.height * 0.38f - lift, alpha, _damageStyle);
 
         if (entry.Heal > 0f)
-            DrawFloatingText("+" + entry.Heal.ToString("0"), actor.center.x, actor.y + actor.height * 0.32f - lift, alpha, _healStyle);
+        {
+            Rect healTarget = entry.ActorIsPlayer ? playerRect : enemyRect;
+            DrawFloatingText("+" + entry.Heal.ToString("0"), healTarget.center.x, healTarget.y + healTarget.height * 0.32f - lift, alpha, _healStyle);
+        }
+
+        if (entry.BuffValue > 0f)
+        {
+            Rect buffTarget = entry.ActorIsPlayer ? playerRect : enemyRect;
+            DrawFloatingText(LocalizeAttrName(entry.BuffAttrName), buffTarget.center.x, buffTarget.y + buffTarget.height * 0.1f - lift, alpha, _popupStyle);
+        }
+    }
+
+    string LocalizePopupText(string text)
+    {
+        switch (text)
+        {
+            case "Combo": return "连击";
+            case "Counter": return "反击";
+            case "Stunned": return "击晕";
+            default: return text;
+        }
+    }
+
+    string LocalizeAttrName(string attrName)
+    {
+        switch (attrName)
+        {
+            case "Attack": return "攻击";
+            case "Defence": return "防御";
+            case "Hp": return "生命";
+            case "Agility": return "敏捷";
+            case "CritRate": return "暴击";
+            case "CounterRate": return "反击";
+            case "ComboRate": return "连击";
+            case "DodgeRate": return "闪避";
+            case "StunRate": return "击晕";
+            case "LifeStealRate": return "吸血";
+            case "DamageIncrease": return "最终增伤";
+            case "DamageDecrease": return "最终减伤";
+            case "Healing": return "强化治疗";
+            case "PetIncrease": return "强化宠物";
+            default: return string.IsNullOrEmpty(attrName) ? "强化" : attrName;
+        }
     }
 
     void DrawFloatingText(string text, float centerX, float y, float alpha, GUIStyle baseStyle)
@@ -558,6 +698,8 @@ public class CombatWindowUI : MonoBehaviour
         _stage = null;
         _result = null;
         _monsterAnimations = null;
+        _playerPetAnimations = null;
+        _enemyPetAnimations = null;
     }
 
     CombatLogEntry CurrentEvent()
@@ -589,7 +731,7 @@ public class CombatWindowUI : MonoBehaviour
 
     float CurrentProgress()
     {
-        return Mathf.Clamp01((Time.unscaledTime - _eventStartTime) / EventDuration);
+        return Mathf.Clamp01((Time.unscaledTime - _eventStartTime) / ScaledDuration(EventDuration));
     }
 
     float CurrentPlayerHp(float progress)
@@ -597,7 +739,7 @@ public class CombatWindowUI : MonoBehaviour
         if (_playingEnemyDeath) return _result.PlayerHp;
         if (_showResult) return _result.PlayerHp;
         CombatLogEntry current = CurrentEvent();
-        if (current != null && current.Type == CombatEventType.Attack && progress < AttackReachTime)
+        if (current != null && (current.Type == CombatEventType.Attack || current.Type == CombatEventType.PetSkill) && progress < AttackReachTime)
             return PreviousPlayerHp();
         return current != null ? current.PlayerHp : _result.PlayerMaxHp;
     }
@@ -607,7 +749,7 @@ public class CombatWindowUI : MonoBehaviour
         if (_playingEnemyDeath) return _result.EnemyHp;
         if (_showResult) return _result.EnemyHp;
         CombatLogEntry current = CurrentEvent();
-        if (current != null && current.Type == CombatEventType.Attack && progress < AttackReachTime)
+        if (current != null && (current.Type == CombatEventType.Attack || current.Type == CombatEventType.PetSkill) && progress < AttackReachTime)
             return PreviousEnemyHp();
         return current != null ? current.EnemyHp : _result.EnemyMaxHp;
     }
@@ -643,6 +785,11 @@ public class CombatWindowUI : MonoBehaviour
             return Mathf.SmoothStep(1f, 0f, (progress - AttackReachTime) / (AttackReturnTime - AttackReachTime));
 
         return 0f;
+    }
+
+    float ScaledDuration(float duration)
+    {
+        return duration * BaseSpeedScale / Mathf.Max(0.01f, _battleSpeed);
     }
 
     GUIStyle FloatingStyle(Color color, int fontSize)
@@ -730,6 +877,56 @@ public class CombatWindowUI : MonoBehaviour
 
             if (digits.Length <= 4) return digits;
             return digits.Substring(digits.Length - 4);
+        }
+    }
+
+    sealed class PetAnimationSet
+    {
+        const string ResourceRoot = "Sprites/Pets";
+        static readonly Dictionary<string, PetAnimationSet> Cache = new Dictionary<string, PetAnimationSet>();
+
+        public Sprite[] Idle;
+        public Sprite[] Attack;
+
+        public static PetAnimationSet Load(string resource)
+        {
+            if (string.IsNullOrWhiteSpace(resource)) return null;
+
+            string id = resource.Trim();
+            if (Cache.TryGetValue(id, out PetAnimationSet cached))
+                return cached;
+
+            string path = ResourceRoot + "/" + id;
+            Sprite[] allFrames = Resources.LoadAll<Sprite>(path);
+            if (allFrames == null || allFrames.Length == 0)
+            {
+                Debug.LogWarning("[CombatWindowUI] Pet animation frames not found: " + path);
+                Cache[id] = null;
+                return null;
+            }
+
+            var set = new PetAnimationSet
+            {
+                Idle = FilterFrames(allFrames, id + "_Idle_"),
+                Attack = FilterFrames(allFrames, id + "_Attack_"),
+            };
+
+            Cache[id] = set;
+            return set;
+        }
+
+        static Sprite[] FilterFrames(Sprite[] frames, string prefix)
+        {
+            var list = new List<Sprite>();
+            for (int i = 0; i < frames.Length; i++)
+            {
+                Sprite sprite = frames[i];
+                if (sprite != null && sprite.name.StartsWith(prefix, System.StringComparison.OrdinalIgnoreCase))
+                    list.Add(sprite);
+            }
+
+            list.Sort((a, b) => string.CompareOrdinal(a.name, b.name));
+            return list.ToArray();
         }
     }
 }

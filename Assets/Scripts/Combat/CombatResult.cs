@@ -9,5 +9,9 @@ public class CombatResult
     public float EnemyMaxHp;
     public float PlayerHp;
     public float EnemyHp;
+    public int PlayerPetId;
+    public string PlayerPetResource;
+    public int EnemyPetId;
+    public string EnemyPetResource;
     public List<CombatLogEntry> Logs = new List<CombatLogEntry>();
 }

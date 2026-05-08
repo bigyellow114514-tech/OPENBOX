@@ -2,6 +2,7 @@ public enum CombatEventType
 {
     Attack,
     Popup,
+    PetSkill,
 }
 
 public class CombatLogEntry
@@ -16,8 +17,13 @@ public class CombatLogEntry
     public bool Crit;
     public bool Stunned;
     public bool Combo;
+    public int PetId;
+    public string PetResource;
+    public bool PetActorIsPlayer;
     public float Damage;
     public float Heal;
+    public float BuffValue;
+    public string BuffAttrName;
     public float PlayerHp;
     public float EnemyHp;
     public bool PlayerStunned;

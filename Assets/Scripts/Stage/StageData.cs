@@ -16,6 +16,7 @@ public class StageData
     public string MonsterAvatar;
     public int MaxRound;
     public RoleAttr EnemyAttr;
+    public int EnemyPetId;
     public int PetTicketReward;
 
     public static StageData Create(int stageId)
@@ -39,6 +40,7 @@ public class StageData
             StageName = "Stage " + stageId,
             MonsterAvatar = "1001",
             MaxRound = DefaultMaxRound,
+            EnemyPetId = 101,
             EnemyAttr = new RoleAttr
             {
                 Hp = 70f + scale * 18f,
@@ -138,10 +140,24 @@ public class StageData
                     PetIncrease = row.GetFloat(columns, "PetIncrease"),
                     PetDecrease = row.GetFloat(columns, "PetDecrease"),
                 },
+                EnemyPetId = ReadEnemyPetId(row, columns),
                 PetTicketReward = row.GetInt(columns, "PetTicketReward",
                     row.GetInt(columns, "RewardEnergy", 1)),
             };
         }
+    }
+
+    static int ReadEnemyPetId(ExcelRow row, Dictionary<string, int> columns)
+    {
+        int petId = row.GetInt(columns, "PetID");
+        if (petId > 0) return petId;
+
+        petId = row.GetInt(columns, "EnemyPetID");
+        if (petId > 0) return petId;
+
+        // Current Stage.xlsx uses "Int" as the code header for the pet-id column.
+        petId = row.GetInt(columns, "Int");
+        return petId > 0 ? petId : 101;
     }
 
     static StageData Clone(StageData source)
@@ -153,6 +169,7 @@ public class StageData
             MonsterAvatar = source.MonsterAvatar,
             MaxRound = source.MaxRound,
             EnemyAttr = source.EnemyAttr,
+            EnemyPetId = source.EnemyPetId,
             PetTicketReward = source.PetTicketReward,
         };
     }
