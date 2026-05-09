@@ -145,18 +145,20 @@ public static class CombatSimulator
 
         int comboCount = 0;
         bool keepAttacking;
+        bool comboAttack = false;
 
         do
         {
             keepAttacking = false;
-            bool interruptedByCounter = ResolveHit(result, round, actor, target, player, enemy, false);
+            bool interruptedByCounter = ResolveHit(result, round, actor, target, player, enemy, false, comboAttack);
+            comboAttack = false;
             if (actor.IsDead || target.IsDead || interruptedByCounter) return;
 
             if (Roll(EffectiveRate(actor.Attr.ComboRate, target.Attr.AntiComboRate)) && comboCount < MaxComboHits)
             {
                 comboCount++;
                 keepAttacking = true;
-                AddPopup(result, round, actor, target, player, enemy, "连击", combo: true);
+                comboAttack = true;
             }
         }
         while (keepAttacking);
@@ -169,11 +171,12 @@ public static class CombatSimulator
         CombatantState target,
         CombatantState player,
         CombatantState enemy,
-        bool isCounter)
+        bool isCounter,
+        bool isCombo = false)
     {
         if (Roll(EffectiveRate(target.Attr.DodgeRate, actor.Attr.AntiDodgeRate)))
         {
-            AddAttack(result, round, actor, target, player, enemy, 0f, 0f, false, true, false, isCounter);
+            AddAttack(result, round, actor, target, player, enemy, 0f, 0f, false, true, false, isCounter, isCombo);
             return TryCounter(result, round, actor, target, player, enemy);
         }
 
@@ -191,7 +194,7 @@ public static class CombatSimulator
             stunned = true;
         }
 
-        AddAttack(result, round, actor, target, player, enemy, damage, heal, crit, false, stunned, isCounter);
+        AddAttack(result, round, actor, target, player, enemy, damage, heal, crit, false, stunned, isCounter, isCombo);
 
         if (target.IsDead) return false;
 
@@ -234,7 +237,6 @@ public static class CombatSimulator
     {
         if (!Roll(EffectiveRate(target.Attr.CounterRate, actor.Attr.AntiCounterRate))) return false;
 
-        AddPopup(result, round, target, actor, player, enemy, "反击");
         ResolveHit(result, round, target, actor, player, enemy, true);
         return true;
     }
@@ -266,7 +268,8 @@ public static class CombatSimulator
         bool crit,
         bool dodged,
         bool stunned,
-        bool counter)
+        bool counter,
+        bool combo = false)
     {
         var entry = NewEntry(CombatEventType.Attack, round, actor, target, player, enemy, "");
         entry.Damage = damage;
@@ -275,6 +278,7 @@ public static class CombatSimulator
         entry.Dodged = dodged;
         entry.Stunned = stunned;
         entry.Counter = counter;
+        entry.Combo = combo;
         result.Logs.Add(entry);
     }
 

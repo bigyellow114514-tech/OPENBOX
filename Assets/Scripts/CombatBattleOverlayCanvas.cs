@@ -156,14 +156,20 @@ public sealed class CombatBattleOverlayCanvas
         if (entry.Heal > 0f)
             AddFloatingText("+" + entry.Heal.ToString("0"), entry.ActorIsPlayer ? new Vector2(-250f, -62f) : new Vector2(250f, -54f), new Color(0.25f, 1f, 0.35f));
 
+        if (entry.Combo)
+            AddFloatingText("连击", entry.ActorIsPlayer ? new Vector2(-250f, 98f) : new Vector2(250f, 98f), new Color(1f, 0.88f, 0.18f));
+
+        if (entry.Counter)
+            AddFloatingText("反击", entry.ActorIsPlayer ? new Vector2(-250f, 98f) : new Vector2(250f, 98f), new Color(1f, 0.88f, 0.18f));
+
         if (entry.Dodged)
-            AddFloatingText("Dodge", entry.TargetIsPlayer ? new Vector2(-250f, 8f) : new Vector2(250f, 8f), new Color(1f, 0.88f, 0.18f));
+            AddFloatingText("闪避", entry.TargetIsPlayer ? new Vector2(-250f, 8f) : new Vector2(250f, 8f), new Color(1f, 0.88f, 0.18f));
 
         if (entry.Crit)
-            AddFloatingText("Crit", entry.TargetIsPlayer ? new Vector2(-250f, 38f) : new Vector2(250f, 38f), new Color(1f, 0.88f, 0.18f));
+            AddFloatingText("暴击", entry.TargetIsPlayer ? new Vector2(-250f, 38f) : new Vector2(250f, 38f), new Color(1f, 0.88f, 0.18f));
 
         if (entry.Stunned)
-            AddFloatingText("Stun", entry.TargetIsPlayer ? new Vector2(-250f, 68f) : new Vector2(250f, 68f), new Color(1f, 0.88f, 0.18f));
+            AddFloatingText("击晕", entry.TargetIsPlayer ? new Vector2(-250f, 68f) : new Vector2(250f, 68f), new Color(1f, 0.88f, 0.18f));
     }
 
     void AddFloatingText(string text, Vector2 anchoredPosition, Color color)

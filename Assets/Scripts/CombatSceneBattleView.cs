@@ -40,6 +40,9 @@ public sealed class CombatSceneBattleView
     CombatSceneUnitView _playerPet;
     CombatSceneUnitView _enemyPet;
     GameObject _healVFXPrefab;
+    GameObject _stunVFXPrefab;
+    GameObject _playerStunVFX;
+    GameObject _enemyStunVFX;
     CombatLogEntry _lastEventWithVFX;
     StageData _stage;
     CombatResult _result;
@@ -58,6 +61,7 @@ public sealed class CombatSceneBattleView
         _camera = Camera.main;
         _rectSprite = CreateRectSprite();
         _healVFXPrefab = Resources.Load<GameObject>("VFX/PetHeal");
+        _stunVFXPrefab = Resources.Load<GameObject>("VFX/StunBuff");
         _layout = CombatBattleLayoutSettings.LoadDefault();
 
         _root = new GameObject("CombatScenePopup");
@@ -107,6 +111,7 @@ public sealed class CombatSceneBattleView
         _stage = null;
         _result = null;
         ClearFloatingTexts();
+        ClearStunVFX();
         _root.SetActive(false);
     }
 
@@ -132,6 +137,7 @@ public sealed class CombatSceneBattleView
         HandleInput(showResult);
         UpdateTexts(showResult, round, playerHp, enemyHp);
         UpdateUnits(current, progress, playingEnemyDeath, deathProgress);
+        UpdateStunVFX(current, showResult || playingEnemyDeath);
         UpdateHpBars(playerHp, enemyHp);
         UpdateFloatingTexts();
 
@@ -143,7 +149,7 @@ public sealed class CombatSceneBattleView
 
         if (current != null && current.Type == CombatEventType.PetSkill && current.Heal > 0f && progress >= AttackReachTime && _lastEventWithVFX != current)
         {
-            SpawnHealVFX(current.ActorIsPlayer ? _player : _enemy);
+            SpawnHealVFX(HealTargetUnit(current));
             _lastEventWithVFX = current;
         }
 
@@ -159,6 +165,8 @@ public sealed class CombatSceneBattleView
     {
         DestroyChildren(_unitLayer);
         DestroyChildren(_vfxLayer);
+        _playerStunVFX = null;
+        _enemyStunVFX = null;
 
         Rect arena = ArenaRect();
         float unitW = arena.width * _layout.unitWidthRatio;
@@ -210,8 +218,8 @@ public sealed class CombatSceneBattleView
         Rect playerPetHome = PlayerPetHome(playerHome);
         Rect enemyPetHome = EnemyPetHome(enemyHome);
 
-        _player?.SetHome(new Vector3(playerHome.center.x, playerHome.yMin + playerHome.height * _layout.unitPivotHeight, -0.1f));
-        _enemy?.SetHome(new Vector3(enemyHome.center.x, enemyHome.yMin + enemyHome.height * _layout.unitPivotHeight, -0.1f));
+        _player?.SetHome(UnitHomePosition(arena, playerHome, -0.1f));
+        _enemy?.SetHome(UnitHomePosition(arena, enemyHome, -0.1f));
         _playerPet?.SetHome(new Vector3(playerPetHome.center.x, playerPetHome.center.y, -0.08f));
         _enemyPet?.SetHome(new Vector3(enemyPetHome.center.x, enemyPetHome.center.y, -0.08f));
 
@@ -251,8 +259,8 @@ public sealed class CombatSceneBattleView
         Rect enemyHome = EnemyHome(arena);
         Rect playerPetHome = PlayerPetHome(playerHome);
         Rect enemyPetHome = EnemyPetHome(enemyHome);
-        Vector3 playerPos = new Vector3(playerHome.center.x, playerHome.yMin + playerHome.height * _layout.unitPivotHeight, -0.1f);
-        Vector3 enemyPos = new Vector3(enemyHome.center.x, enemyHome.yMin + enemyHome.height * _layout.unitPivotHeight, -0.1f);
+        Vector3 playerPos = UnitHomePosition(arena, playerHome, -0.1f);
+        Vector3 enemyPos = UnitHomePosition(arena, enemyHome, -0.1f);
         Vector3 playerPetPos = new Vector3(playerPetHome.center.x, playerPetHome.center.y, -0.08f);
         Vector3 enemyPetPos = new Vector3(enemyPetHome.center.x, enemyPetHome.center.y, -0.08f);
         bool playerAnimated = false;
@@ -388,28 +396,67 @@ public sealed class CombatSceneBattleView
     void SpawnHealVFX(CombatSceneUnitView target)
     {
         if (target == null || _healVFXPrefab == null) return;
-        GameObject go = UnityEngine.Object.Instantiate(_healVFXPrefab, target.VFXAnchor.position, Quaternion.identity, _vfxLayer);
+        GameObject go = UnityEngine.Object.Instantiate(_healVFXPrefab, target.VisualPoint(0.45f), Quaternion.identity, _vfxLayer);
         go.transform.localScale = Vector3.one * 0.9f;
+    }
+
+    void UpdateStunVFX(CombatLogEntry current, bool forceHidden)
+    {
+        bool playerStunned = !forceHidden && current != null && current.PlayerStunned;
+        bool enemyStunned = !forceHidden && current != null && current.EnemyStunned;
+
+        UpdateStunVFXForUnit(ref _playerStunVFX, _player, playerStunned);
+        UpdateStunVFXForUnit(ref _enemyStunVFX, _enemy, enemyStunned);
+    }
+
+    void UpdateStunVFXForUnit(ref GameObject instance, CombatSceneUnitView unit, bool visible)
+    {
+        if (_stunVFXPrefab == null || unit == null)
+            return;
+
+        if (instance == null)
+        {
+            instance = UnityEngine.Object.Instantiate(_stunVFXPrefab, _vfxLayer);
+            instance.transform.localScale = Vector3.one * 0.82f;
+            instance.SetActive(false);
+        }
+
+        instance.transform.position = unit.VisualPoint(1.08f);
+        if (instance.activeSelf != visible)
+            instance.SetActive(visible);
+    }
+
+    void ClearStunVFX()
+    {
+        if (_playerStunVFX != null)
+            UnityEngine.Object.Destroy(_playerStunVFX);
+        if (_enemyStunVFX != null)
+            UnityEngine.Object.Destroy(_enemyStunVFX);
+
+        _playerStunVFX = null;
+        _enemyStunVFX = null;
     }
 
     void SpawnEventText(CombatLogEntry entry)
     {
         if (entry == null) return;
-        CombatSceneUnitView target = entry.TargetIsPlayer ? _player : _enemy;
         CombatSceneUnitView actor = entry.ActorIsPlayer ? _player : _enemy;
-        if (entry.Type == CombatEventType.PetSkill)
-            actor = entry.PetActorIsPlayer ? _playerPet : _enemyPet;
+        CombatSceneUnitView target = entry.TargetIsPlayer ? _player : _enemy;
 
         if (entry.Damage > 0f)
             AddFloatingText("-" + entry.Damage.ToString("0"), target.Transform.position + Vector3.up * 0.55f, new Color(1f, 0.22f, 0.18f));
         if (entry.Heal > 0f)
-            AddFloatingText("+" + entry.Heal.ToString("0"), actor.Transform.position + Vector3.up * 0.65f, new Color(0.25f, 1f, 0.35f));
+            AddFloatingText("+" + entry.Heal.ToString("0"), HealTargetUnit(entry).Transform.position + Vector3.up * 0.65f, new Color(0.25f, 1f, 0.35f));
+        if (entry.Combo)
+            AddFloatingText("连击", actor.Transform.position + Vector3.up * 1.25f, new Color(1f, 0.88f, 0.18f));
+        if (entry.Counter)
+            AddFloatingText("反击", actor.Transform.position + Vector3.up * 1.25f, new Color(1f, 0.88f, 0.18f));
         if (entry.Dodged)
-            AddFloatingText("Dodge", target.Transform.position + Vector3.up * 0.85f, new Color(1f, 0.88f, 0.18f));
+            AddFloatingText("闪避", target.Transform.position + Vector3.up * 0.85f, new Color(1f, 0.88f, 0.18f));
         if (entry.Crit)
-            AddFloatingText("Crit", target.Transform.position + Vector3.up * 1.05f, new Color(1f, 0.88f, 0.18f));
+            AddFloatingText("暴击", target.Transform.position + Vector3.up * 1.05f, new Color(1f, 0.88f, 0.18f));
         if (entry.Stunned)
-            AddFloatingText("Stun", target.Transform.position + Vector3.up * 1.25f, new Color(1f, 0.88f, 0.18f));
+            AddFloatingText("击晕", target.Transform.position + Vector3.up * 1.45f, new Color(1f, 0.88f, 0.18f));
     }
 
     void AddFloatingText(string text, Vector3 position, Color color)
@@ -419,6 +466,14 @@ public sealed class CombatSceneBattleView
         label.color = color;
         label.transform.position = position;
         _floatingTexts.Add(new FloatingText(label, position, Time.unscaledTime, color));
+    }
+
+    CombatSceneUnitView HealTargetUnit(CombatLogEntry entry)
+    {
+        if (entry != null && entry.Type == CombatEventType.PetSkill)
+            return entry.PetActorIsPlayer ? _player : _enemy;
+
+        return entry != null && entry.ActorIsPlayer ? _player : _enemy;
     }
 
     void UpdateFloatingTexts()
@@ -480,6 +535,12 @@ public sealed class CombatSceneBattleView
         float width = arena.width * _layout.unitWidthRatio * scale;
         float height = arena.height * _layout.unitHeightRatio * scale;
         return new Rect(arena.xMin + arena.width * _layout.enemyXRatio - width * 0.5f, arena.yMin + arena.height * _layout.unitBottomRatio, width, height);
+    }
+
+    Vector3 UnitHomePosition(Rect arena, Rect home, float z)
+    {
+        float baseHeight = arena.height * _layout.unitHeightRatio;
+        return new Vector3(home.center.x, home.yMin + baseHeight * _layout.unitPivotHeight, z);
     }
 
     Rect PlayerPetHome(Rect owner)

@@ -60,6 +60,18 @@ public sealed class CombatSceneUnitView
         _root.SetActive(visible);
     }
 
+    public Vector3 VisualPoint(float normalizedHeight)
+    {
+        if (_renderer.sprite == null)
+            return _root.transform.position;
+
+        Bounds bounds = _renderer.bounds;
+        return new Vector3(
+            bounds.center.x,
+            Mathf.Lerp(bounds.min.y, bounds.max.y, Mathf.Clamp01(normalizedHeight)),
+            _root.transform.position.z);
+    }
+
     public void ShowIdle(float time, float fps)
     {
         SetSprite(FrameAt(_idleFrames, time, fps, true) ?? _fallback);

@@ -797,7 +797,7 @@ public class CombatWindowUI : MonoBehaviour
         if (t <= 0f || t >= 1f)
             return;
 
-        Rect target = entry.ActorIsPlayer ? playerRect : enemyRect;
+        Rect target = HealTargetRect(entry, playerRect, enemyRect);
         float fadeIn = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(t / vfx.fadeInPortion));
         float fadeOut = 1f - Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((t - vfx.fadeOutStart) / (1f - vfx.fadeOutStart)));
         float alpha = fadeIn * fadeOut;
@@ -872,6 +872,12 @@ public class CombatWindowUI : MonoBehaviour
             return;
         }
 
+        if (entry.Combo)
+            DrawFloatingText("连击", actor.center.x, actor.y - 28f - lift, alpha, _popupStyle);
+
+        if (entry.Counter)
+            DrawFloatingText("反击", actor.center.x, actor.y - 28f - lift, alpha, _popupStyle);
+
         if (entry.Dodged)
             DrawFloatingText("闪避", target.center.x, target.y - lift, alpha, _popupStyle);
 
@@ -886,7 +892,7 @@ public class CombatWindowUI : MonoBehaviour
 
         if (entry.Heal > 0f)
         {
-            Rect healTarget = entry.ActorIsPlayer ? playerRect : enemyRect;
+            Rect healTarget = HealTargetRect(entry, playerRect, enemyRect);
             DrawFloatingText("+" + entry.Heal.ToString("0"), healTarget.center.x, healTarget.y + healTarget.height * 0.32f - lift, alpha, _healStyle);
         }
 
@@ -906,6 +912,14 @@ public class CombatWindowUI : MonoBehaviour
             case "Stunned": return "击晕";
             default: return text;
         }
+    }
+
+    Rect HealTargetRect(CombatLogEntry entry, Rect playerRect, Rect enemyRect)
+    {
+        if (entry != null && entry.Type == CombatEventType.PetSkill)
+            return entry.PetActorIsPlayer ? playerRect : enemyRect;
+
+        return entry != null && entry.ActorIsPlayer ? playerRect : enemyRect;
     }
 
     string LocalizeAttrName(string attrName)
