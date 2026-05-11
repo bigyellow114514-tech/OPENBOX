@@ -1,3 +1,5 @@
+using System;
+using System.Collections;
 using System.IO;
 using UnityEngine;
 
@@ -5,13 +7,15 @@ public class PlayerStaminaManager : MonoBehaviour
 {
     public static PlayerStaminaManager Instance { get; private set; }
 
-    const string KeyStamina    = "PlayerStamina";
-    const string RoleLevelPath = "Excel/RoleLevel.xlsx";
+    const string KeyStamina      = "PlayerStamina";
+    const string KeyLastSaveTime = "StaminaLastSaveTime";
+    const string RoleLevelPath   = "Excel/RoleLevel.xlsx";
+    const float  RecoverySeconds = 300f; // 5 minutes per stamina point
 
     public int CurrentStamina { get; private set; }
     public int MaxStamina     { get; private set; }
 
-    public event System.Action OnStaminaChanged;
+    public event Action OnStaminaChanged;
 
     int _lastLevel;
 
@@ -23,18 +27,51 @@ public class PlayerStaminaManager : MonoBehaviour
 
     void Start()
     {
-        _lastLevel        = PlayerExpManager.Instance?.Level ?? 1;
-        MaxStamina        = ReadMaxStamina(_lastLevel);
-        CurrentStamina    = Mathf.Clamp(PlayerPrefs.GetInt(KeyStamina, MaxStamina), 0, MaxStamina);
+        _lastLevel     = PlayerExpManager.Instance?.Level ?? 1;
+        MaxStamina     = ReadMaxStamina(_lastLevel);
+        CurrentStamina = Mathf.Clamp(PlayerPrefs.GetInt(KeyStamina, MaxStamina), 0, MaxStamina);
+
+        ApplyOfflineRecovery();
 
         if (PlayerExpManager.Instance != null)
             PlayerExpManager.Instance.OnExpChanged += HandleExpChanged;
+
+        StartCoroutine(RecoveryCoroutine());
     }
 
     void OnDestroy()
     {
         if (PlayerExpManager.Instance != null)
             PlayerExpManager.Instance.OnExpChanged -= HandleExpChanged;
+    }
+
+    void ApplyOfflineRecovery()
+    {
+        string savedStr = PlayerPrefs.GetString(KeyLastSaveTime, "");
+        if (string.IsNullOrEmpty(savedStr) || !long.TryParse(savedStr, out long ticks))
+            return;
+
+        double elapsed  = (DateTime.UtcNow - new DateTime(ticks, DateTimeKind.Utc)).TotalSeconds;
+        int    recovered = Mathf.FloorToInt((float)elapsed / RecoverySeconds);
+        if (recovered <= 0) return;
+
+        CurrentStamina = Mathf.Min(CurrentStamina + recovered, MaxStamina);
+        Save();
+        OnStaminaChanged?.Invoke();
+    }
+
+    IEnumerator RecoveryCoroutine()
+    {
+        while (true)
+        {
+            yield return new WaitForSecondsRealtime(RecoverySeconds);
+            if (CurrentStamina < MaxStamina)
+            {
+                CurrentStamina++;
+                Save();
+                OnStaminaChanged?.Invoke();
+            }
+        }
     }
 
     void HandleExpChanged()
@@ -75,6 +112,7 @@ public class PlayerStaminaManager : MonoBehaviour
     void Save()
     {
         PlayerPrefs.SetInt(KeyStamina, CurrentStamina);
+        PlayerPrefs.SetString(KeyLastSaveTime, DateTime.UtcNow.Ticks.ToString());
         PlayerPrefs.Save();
     }
 
@@ -96,7 +134,7 @@ public class PlayerStaminaManager : MonoBehaviour
                     return row.GetInt(columns, "Stamina", 20);
             }
         }
-        catch (System.Exception e)
+        catch (Exception e)
         {
             Debug.LogError("[PlayerStaminaManager] Failed to read RoleLevel.xlsx: " + e.Message);
         }
