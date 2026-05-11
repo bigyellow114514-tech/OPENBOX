@@ -113,6 +113,7 @@ public class CharacterAttrUI : MonoBehaviour
             PlayerStaminaManager.Instance?.ResetToDefault();
             PlayerResourceManager.Instance?.ResetToDefault();
             TreeExpManager.Instance?.ResetToDefault();
+            PetSystemManager.Instance?.ResetToDefault();
         }
 
         PlayerCharacter chr = PlayerCharacter.Instance;

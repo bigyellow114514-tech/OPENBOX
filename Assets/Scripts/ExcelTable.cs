@@ -48,6 +48,16 @@ public sealed class ExcelTable
         return new ExcelTable(rows);
     }
 
+    public static ExcelTable LoadSheet(string path, string sheetName)
+    {
+        using var file = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+        using var zip = new ZipArchive(file, ZipArchiveMode.Read);
+        string worksheetPath = FindWorksheetPath(zip, sheetName);
+        if (string.IsNullOrEmpty(worksheetPath))
+            throw new FileNotFoundException("Worksheet not found: " + sheetName);
+        return Load(path, worksheetPath);
+    }
+
     public string GetValue(int rowIndex, int colIndex)
     {
         return rowIndex >= 0 && rowIndex < _rows.Count
@@ -85,6 +95,43 @@ public sealed class ExcelTable
             list.Add(string.Concat(si.Descendants(ns + "t").Select(t => t.Value)));
 
         return list;
+    }
+
+    static string FindWorksheetPath(ZipArchive zip, string sheetName)
+    {
+        var workbookEntry = zip.GetEntry("xl/workbook.xml");
+        var relsEntry = zip.GetEntry("xl/_rels/workbook.xml.rels");
+        if (workbookEntry == null || relsEntry == null) return "";
+
+        XNamespace ns = "http://schemas.openxmlformats.org/spreadsheetml/2006/main";
+        XNamespace relNs = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
+        XNamespace pkgRelNs = "http://schemas.openxmlformats.org/package/2006/relationships";
+
+        XDocument workbook;
+        using (var stream = workbookEntry.Open())
+            workbook = XDocument.Load(stream);
+
+        XDocument rels;
+        using (var stream = relsEntry.Open())
+            rels = XDocument.Load(stream);
+
+        var sheet = workbook.Descendants(ns + "sheet")
+            .FirstOrDefault(s => string.Equals((string)s.Attribute("name"), sheetName, System.StringComparison.OrdinalIgnoreCase));
+        if (sheet == null) return "";
+
+        string relationshipId = (string)sheet.Attribute(relNs + "id") ?? "";
+        if (string.IsNullOrEmpty(relationshipId)) return "";
+
+        var relationship = rels.Descendants(pkgRelNs + "Relationship")
+            .FirstOrDefault(r => string.Equals((string)r.Attribute("Id"), relationshipId, System.StringComparison.Ordinal));
+        if (relationship == null) return "";
+
+        string target = (string)relationship.Attribute("Target") ?? "";
+        if (string.IsNullOrEmpty(target)) return "";
+
+        target = target.Replace('\\', '/');
+        if (target.StartsWith("/")) return target.TrimStart('/');
+        return "xl/" + target;
     }
 
     static string GetCellValue(XElement cell, XNamespace ns, List<string> sharedStrings)

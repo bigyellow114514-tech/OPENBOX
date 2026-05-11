@@ -16,7 +16,8 @@ public class PlayerCharacter : MonoBehaviour
     public int Level => PlayerExpManager.Instance != null ? PlayerExpManager.Instance.Level : 1;
     public RoleAttr BaseAttr => GetBaseAttr();
     public RoleAttr EquipAttr => _equipAttr;
-    public RoleAttr FinalAttr => GetBaseAttr() + _equipAttr;
+    public RoleAttr PetAttr => PetSystemManager.Instance != null ? PetSystemManager.Instance.GetDeployedPetBonus(GetBaseAttr()) : default;
+    public RoleAttr FinalAttr => GetBaseAttr() + _equipAttr + PetAttr;
     public int CombatPower => CalculateCombatPower(FinalAttr);
 
     public event System.Action OnAttrChanged;
@@ -25,6 +26,7 @@ public class PlayerCharacter : MonoBehaviour
     {
         if (Instance != null) { Destroy(gameObject); return; }
         Instance = this;
+        PetSystemManager.EnsureInstance();
         GetBaseAttr();
     }
 
@@ -43,6 +45,11 @@ public class PlayerCharacter : MonoBehaviour
     public void ResetEquipAttr()
     {
         _equipAttr = default;
+        OnAttrChanged?.Invoke();
+    }
+
+    public void RefreshFromPetSystem()
+    {
         OnAttrChanged?.Invoke();
     }
 
