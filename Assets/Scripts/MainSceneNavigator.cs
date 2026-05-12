@@ -6,9 +6,18 @@ public class MainSceneNavigator : MonoBehaviour
 {
     const string RanchSceneName = "RanchScene";
 
+    [SerializeField] Button arrowButton;
+    [SerializeField] Button petButton;
+    [SerializeField] Button petGachaButton;
+
     void Start()
     {
-        BuildUI();
+        ResolveSceneButtons();
+
+        if (arrowButton == null && petButton == null && petGachaButton == null)
+            BuildUI();
+
+        BindButtons();
     }
 
     void BuildUI()
@@ -23,17 +32,54 @@ public class MainSceneNavigator : MonoBehaviour
         scaler.matchWidthOrHeight = 0.5f;
         canvasGO.AddComponent<GraphicRaycaster>();
 
-        BuildArrowButton(canvasGO.transform, "◄",
+        arrowButton = BuildArrowButton(canvasGO.transform, "◄",
             new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(20f, 0f),
-            () => SceneTransitionManager.Instance.LoadScene(RanchSceneName));
+            OnArrowClicked);
 
-        BuildIconButton(canvasGO.transform, "PetButton", "宠物", new Vector2(20f, -92f), "UI/Pets/Pet_Button",
-            () => PetPanelUI.ShowOrCreate());
-        BuildIconButton(canvasGO.transform, "PetGachaButton", "抽宠", new Vector2(20f, -204f), "UI/Pets/Gacha_Button",
+        petButton = BuildIconButton(canvasGO.transform, "PetButton", "宠物", new Vector2(20f, -92f), "UI/Pets/Pet_Button",
+            OnPetButtonClicked);
+        petGachaButton = BuildIconButton(canvasGO.transform, "PetGachaButton", "抽宠", new Vector2(20f, -204f), "UI/Pets/Gacha_Button",
             OnPetGachaClicked);
     }
 
-    void BuildArrowButton(Transform parent, string label, Vector2 anchor, Vector2 pivot,
+    void ResolveSceneButtons()
+    {
+        if (arrowButton == null)
+            arrowButton = FindButton("ArrowButton");
+        if (petButton == null)
+            petButton = FindButton("PetButton");
+        if (petGachaButton == null)
+            petGachaButton = FindButton("PetGachaButton");
+    }
+
+    static Button FindButton(string objectName)
+    {
+        GameObject target = GameObject.Find(objectName);
+        return target != null ? target.GetComponent<Button>() : null;
+    }
+
+    void BindButtons()
+    {
+        if (arrowButton != null)
+        {
+            arrowButton.onClick.RemoveListener(OnArrowClicked);
+            arrowButton.onClick.AddListener(OnArrowClicked);
+        }
+
+        if (petButton != null)
+        {
+            petButton.onClick.RemoveListener(OnPetButtonClicked);
+            petButton.onClick.AddListener(OnPetButtonClicked);
+        }
+
+        if (petGachaButton != null)
+        {
+            petGachaButton.onClick.RemoveListener(OnPetGachaClicked);
+            petGachaButton.onClick.AddListener(OnPetGachaClicked);
+        }
+    }
+
+    Button BuildArrowButton(Transform parent, string label, Vector2 anchor, Vector2 pivot,
         Vector2 position, UnityEngine.Events.UnityAction onClick)
     {
         var btnGO = new GameObject("ArrowButton");
@@ -61,9 +107,10 @@ public class MainSceneNavigator : MonoBehaviour
         tmp.fontSize = 56f;
         tmp.alignment = TextAlignmentOptions.Center;
         tmp.color = Color.white;
+        return btn;
     }
 
-    void BuildIconButton(Transform parent, string name, string label, Vector2 position, string spritePath,
+    Button BuildIconButton(Transform parent, string name, string label, Vector2 position, string spritePath,
         UnityEngine.Events.UnityAction onClick)
     {
         var btnGO = new GameObject(name);
@@ -95,19 +142,27 @@ public class MainSceneNavigator : MonoBehaviour
         tmp.fontSize = 17f;
         tmp.alignment = TextAlignmentOptions.Center;
         tmp.color = Color.white;
+        return btn;
     }
 
-    void OnPetGachaClicked()
+    void OnArrowClicked()
+    {
+        if (SceneTransitionManager.Instance != null)
+            SceneTransitionManager.Instance.LoadScene(RanchSceneName);
+    }
+
+    public void OnPetButtonClicked()
+    {
+        PetPanelUI.ShowOrCreate();
+    }
+
+    public void OnPetGachaClicked()
     {
         PetSystemManager manager = PetSystemManager.EnsureInstance();
-        if (!manager.CanGacha(out string reason))
-        {
-            PetPanelUI.ShowOrCreate(null, reason);
+        if (!manager.CanGacha(out _))
             return;
-        }
 
-        PetInstance pet = manager.Gacha();
-        PetPanelUI.ShowOrCreate(pet, pet != null ? "获得新宠物" : "抽宠失败");
+        manager.Gacha();
     }
 
     Sprite LoadSprite(string path)

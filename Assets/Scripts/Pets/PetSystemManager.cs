@@ -467,6 +467,7 @@ public sealed class PetSystemManager : MonoBehaviour
             _talentPool.Add(new TalentSkillConfig
             {
                 Attr = attr.Trim(),
+                Name = row.Get(columns, "Name"),
                 AttrWeight = row.GetFloat(columns, "AttrWeight"),
                 Rarity1Weight = row.GetFloat(columns, "Rarity1Weight"),
                 Rarity1Value = row.GetFloat(columns, "Rarity1Value"),
@@ -725,6 +726,7 @@ public sealed class TalentSkillNumConfig
 public sealed class TalentSkillConfig
 {
     public string Attr;
+    public string Name;
     public float AttrWeight;
     public float Rarity1Weight;
     public float Rarity1Value;
