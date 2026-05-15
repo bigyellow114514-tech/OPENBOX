@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
+[ExecuteAlways]
 public sealed class PetPanelUI : MonoBehaviour
 {
     enum PanelMode
@@ -23,6 +24,7 @@ public sealed class PetPanelUI : MonoBehaviour
     static readonly Color PurpleTalent = new Color(0.57f, 0.39f, 0.72f, 1f);
     static readonly Color OrangeTalent = new Color(0.82f, 0.49f, 0.20f, 1f);
     static readonly Color SelectedColor = new Color(0.20f, 0.68f, 0.84f, 1f);
+    const float PortraitIdleFps = 12f;
 
     RectTransform _panel;
     RectTransform _body;
@@ -68,8 +70,25 @@ public sealed class PetPanelUI : MonoBehaviour
         InitializeShell();
     }
 
+    void OnValidate()
+    {
+        if (Application.isPlaying) return;
+
+        _font = ResolveFont();
+        if (BindExistingShell())
+            ApplySkinToExistingHierarchy();
+    }
+
     void OnEnable()
     {
+        if (!Application.isPlaying)
+        {
+            _font = ResolveFont();
+            if (BindExistingShell())
+                ApplySkinToExistingHierarchy();
+            return;
+        }
+
         if (PetSystemManager.Instance != null)
             PetSystemManager.Instance.OnPetsChanged += Refresh;
         if (PlayerResourceManager.Instance != null)
@@ -78,10 +97,24 @@ public sealed class PetPanelUI : MonoBehaviour
 
     void OnDisable()
     {
+        if (!Application.isPlaying) return;
+
         if (PetSystemManager.Instance != null)
             PetSystemManager.Instance.OnPetsChanged -= Refresh;
         if (PlayerResourceManager.Instance != null)
             PlayerResourceManager.Instance.OnResourceChanged -= Refresh;
+    }
+
+    void Update()
+    {
+        if (!Application.isPlaying) return;
+
+        PetSystemManager manager = PetSystemManager.Instance;
+        PetConfig config = _selected != null && manager != null ? manager.GetPetConfig(_selected.PetId) : null;
+        AnimatePortrait(_body, config);
+
+        if (_absorbPanel != null && _absorbPanel.gameObject.activeSelf)
+            AnimatePortrait(_absorbBody, config);
     }
 
     public void Show(PetInstance focus = null, string message = "")
@@ -155,7 +188,78 @@ public sealed class PetPanelUI : MonoBehaviour
             back.onClick.AddListener(HideAbsorbPanel);
         }
 
-        return _body != null && _titleText != null && _resourceText != null && _messageText != null;
+        bool bound = _body != null && _titleText != null && _resourceText != null && _messageText != null;
+        if (bound)
+            ApplySkinToExistingHierarchy();
+        return bound;
+    }
+
+    void ApplySkinToExistingHierarchy()
+    {
+        SetImage(_panel, "UI/Pets/pet_panel_bg", Image.Type.Sliced, Color.white);
+        SetImage(_panel?.Find("TitleTab"), "UI/Pets/pet_tab_title_bg", Image.Type.Sliced, Color.white);
+        SetImage(_panel?.Find("ResourcePill"), "UI/Pets/pet_resource_pill_bg", Image.Type.Sliced, Color.white);
+        SetImage(_panel?.Find("CloseButton"), "UI/Pets/pet_button_bg", Image.Type.Sliced, Color.white);
+
+        SetImage(_absorbPanel, "UI/Pets/pet_panel_bg", Image.Type.Sliced, Color.white);
+        SetImage(_absorbPanel?.Find("TitleTab"), "UI/Pets/pet_tab_title_bg", Image.Type.Sliced, Color.white);
+        SetImage(_absorbBody?.Find("Hint"), "UI/Pets/pet_hint_bg", Image.Type.Sliced, Color.white);
+
+        ApplyBodySkin(_body);
+        ApplyBodySkin(_absorbBody);
+    }
+
+    void ApplyBodySkin(Transform body)
+    {
+        if (body == null) return;
+
+        EnsurePortraitFrame(body);
+        SetImage(body.Find("Quality"), "UI/Pets/pet_quality_badge_bg", Image.Type.Sliced, Color.white);
+        SetImage(body.Find("UpgradeButton"), "UI/Pets/pet_button_bg", Image.Type.Sliced, Color.white);
+        SetImage(body.Find("AbsorbButton"), "UI/Pets/pet_button_bg", Image.Type.Sliced, Color.white);
+        SetImage(body.Find("DeployButton"), "UI/Pets/pet_button_bg", Image.Type.Sliced, Color.white);
+        SetImage(body.Find("SkillBox"), "UI/Pets/pet_card_bg", Image.Type.Sliced, Color.white);
+        SetImage(body.Find("TargetInfo"), "UI/Pets/pet_card_bg", Image.Type.Sliced, Color.white);
+        SetImage(body.Find("Benefit"), "UI/Pets/pet_card_bg", Image.Type.Sliced, Color.white);
+        SetImage(body.Find("ConfirmAbsorb"), "UI/Pets/pet_button_bg", Image.Type.Sliced, Color.white);
+        SetImage(body.Find("BackButton"), "UI/Pets/pet_button_bg", Image.Type.Sliced, Color.white);
+
+        for (int i = 0; i < 4; i++)
+            SetImage(body.Find("Talent_" + i), "UI/Pets/pet_talent_slot_bg", Image.Type.Sliced, Color.white);
+
+        for (int i = 0; i < 16; i++)
+            SetImage(body.Find("GridSlot_" + i), "UI/Pets/pet_slot_bg", Image.Type.Sliced, Color.white);
+    }
+
+    void EnsurePortraitFrame(Transform body)
+    {
+        Transform portrait = body.Find("Portrait");
+        if (portrait == null || body.Find("PortraitFrame") != null) return;
+
+        Image frame = NewUI("PortraitFrame", body).AddComponent<Image>();
+        frame.sprite = LoadSprite("UI/Pets/pet_portrait_frame");
+        frame.preserveAspect = true;
+        RectTransform source = portrait as RectTransform;
+        if (source != null)
+        {
+            RectTransform rt = frame.rectTransform;
+            rt.anchorMin = source.anchorMin;
+            rt.anchorMax = source.anchorMax;
+            rt.pivot = source.pivot;
+            rt.anchoredPosition = source.anchoredPosition;
+            rt.sizeDelta = source.sizeDelta;
+        }
+        frame.transform.SetSiblingIndex(portrait.GetSiblingIndex());
+    }
+
+    void SetImage(Transform target, string path, Image.Type type, Color color)
+    {
+        if (target == null) return;
+        Image image = target.GetComponent<Image>();
+        if (image == null) return;
+        image.sprite = LoadSprite(path);
+        image.type = type;
+        image.color = color;
     }
 
     void BuildShell()
@@ -178,9 +282,9 @@ public sealed class PetPanelUI : MonoBehaviour
         _panel.offsetMin = Vector2.zero;
         _panel.offsetMax = Vector2.zero;
         var panelImage = panelGO.AddComponent<Image>();
-        panelImage.sprite = LoadSprite("UI/Pets/Panel_Back");
+        panelImage.sprite = LoadSprite("UI/Pets/pet_panel_bg");
         panelImage.type = Image.Type.Sliced;
-        panelImage.color = PaperColor;
+        panelImage.color = Color.white;
 
         GameObject tab = NewUI("TitleTab", _panel);
         RectTransform tabRt = tab.GetComponent<RectTransform>();
@@ -189,7 +293,10 @@ public sealed class PetPanelUI : MonoBehaviour
         tabRt.pivot = new Vector2(0f, 1f);
         tabRt.anchoredPosition = new Vector2(0f, 0f);
         tabRt.sizeDelta = new Vector2(142f, 34f);
-        tab.AddComponent<Image>().color = TabColor;
+        Image tabImage = tab.AddComponent<Image>();
+        tabImage.sprite = LoadSprite("UI/Pets/pet_tab_title_bg");
+        tabImage.type = Image.Type.Sliced;
+        tabImage.color = Color.white;
 
         _titleText = NewText("Title", tab.transform, "宠物", 18, TextAnchor.MiddleCenter, Color.white);
         Stretch(_titleText.rectTransform);
@@ -197,7 +304,9 @@ public sealed class PetPanelUI : MonoBehaviour
         GameObject resourcePill = NewUI("ResourcePill", _panel);
         SetRect(resourcePill.GetComponent<RectTransform>(), new Vector2(215f, -44f), new Vector2(210f, 34f), new Vector2(0f, 1f));
         Image resourceBg = resourcePill.AddComponent<Image>();
-        resourceBg.color = new Color(0.12f, 0.38f, 0.42f, 0.92f);
+        resourceBg.sprite = LoadSprite("UI/Pets/pet_resource_pill_bg");
+        resourceBg.type = Image.Type.Sliced;
+        resourceBg.color = Color.white;
         _resourceText = NewText("ResourceText", resourcePill.transform, "", 17, TextAnchor.MiddleCenter, Color.white);
         Stretch(_resourceText.rectTransform);
 
@@ -223,9 +332,9 @@ public sealed class PetPanelUI : MonoBehaviour
         _absorbPanel.offsetMin = Vector2.zero;
         _absorbPanel.offsetMax = Vector2.zero;
         Image panelImage = panelGO.AddComponent<Image>();
-        panelImage.sprite = LoadSprite("UI/Pets/Panel_Back");
+        panelImage.sprite = LoadSprite("UI/Pets/pet_panel_bg");
         panelImage.type = Image.Type.Sliced;
-        panelImage.color = PaperColor;
+        panelImage.color = Color.white;
 
         GameObject tab = NewUI("TitleTab", _absorbPanel);
         RectTransform tabRt = tab.GetComponent<RectTransform>();
@@ -234,7 +343,10 @@ public sealed class PetPanelUI : MonoBehaviour
         tabRt.pivot = new Vector2(0f, 1f);
         tabRt.anchoredPosition = Vector2.zero;
         tabRt.sizeDelta = new Vector2(170f, 34f);
-        tab.AddComponent<Image>().color = TabColor;
+        Image tabImage = tab.AddComponent<Image>();
+        tabImage.sprite = LoadSprite("UI/Pets/pet_tab_title_bg");
+        tabImage.type = Image.Type.Sliced;
+        tabImage.color = Color.white;
         Text title = NewText("Title", tab.transform, "宠物吞噬", 18, TextAnchor.MiddleCenter, Color.white);
         Stretch(title.rectTransform);
 
@@ -342,7 +454,7 @@ public sealed class PetPanelUI : MonoBehaviour
         Image portrait = _body.Find("Portrait")?.GetComponent<Image>();
         if (portrait != null)
         {
-            portrait.sprite = LoadPetSprite(config);
+            portrait.sprite = LoadPetIdleFrame(config) ?? LoadPetSprite(config);
             portrait.preserveAspect = true;
         }
 
@@ -413,7 +525,9 @@ public sealed class PetPanelUI : MonoBehaviour
         GameObject hintGO = NewUI("Hint", parent);
         SetRect(hintGO.GetComponent<RectTransform>(), new Vector2(760f, -70f), new Vector2(300f, 42f), new Vector2(0f, 1f));
         Image hintBg = hintGO.AddComponent<Image>();
-        hintBg.color = new Color(0.88f, 0.88f, 0.78f, 0.7f);
+        hintBg.sprite = LoadSprite("UI/Pets/pet_hint_bg");
+        hintBg.type = Image.Type.Sliced;
+        hintBg.color = Color.white;
         Text hint = NewText("HintText", hintGO.transform, "只可吞噬未上阵同名灵兽", 18, TextAnchor.MiddleCenter, new Color(0.70f, 0.38f, 0.12f, 1f));
         Stretch(hint.rectTransform);
 
@@ -460,7 +574,10 @@ public sealed class PetPanelUI : MonoBehaviour
         PetConfig config = _selected != null ? manager.GetPetConfig(_selected.PetId) : null;
         Image portrait = _absorbBody.Find("Portrait")?.GetComponent<Image>();
         if (portrait != null)
-            portrait.sprite = LoadPetSprite(config);
+        {
+            portrait.sprite = LoadPetIdleFrame(config) ?? LoadPetSprite(config);
+            portrait.preserveAspect = true;
+        }
 
         Image qualityBg = _absorbBody.Find("Quality")?.GetComponent<Image>();
         if (qualityBg != null)
@@ -508,8 +625,13 @@ public sealed class PetPanelUI : MonoBehaviour
     {
         PetConfig config = pet != null ? PetSystemManager.Instance.GetPetConfig(pet.PetId) : null;
 
+        Image portraitFrame = NewUI("PortraitFrame", parent).AddComponent<Image>();
+        portraitFrame.sprite = LoadSprite("UI/Pets/pet_portrait_frame");
+        portraitFrame.preserveAspect = true;
+        SetRect(portraitFrame.rectTransform, center, new Vector2(210f, 210f), new Vector2(0f, 1f));
+
         Image portrait = NewUI("Portrait", parent).AddComponent<Image>();
-        portrait.sprite = LoadPetSprite(config);
+        portrait.sprite = LoadPetIdleFrame(config) ?? LoadPetSprite(config);
         portrait.preserveAspect = true;
         SetRect(portrait.rectTransform, center, new Vector2(210f, 210f), new Vector2(0f, 1f));
 
@@ -518,9 +640,9 @@ public sealed class PetPanelUI : MonoBehaviour
             GameObject qualityGO = NewUI("Quality", parent);
             SetRect(qualityGO.GetComponent<RectTransform>(), center + new Vector2(-106f, 80f), new Vector2(66f, 66f), new Vector2(0f, 1f));
             Image qualityBg = qualityGO.AddComponent<Image>();
-            qualityBg.sprite = LoadSprite("UI/Pets/Button_Back");
+            qualityBg.sprite = LoadSprite("UI/Pets/pet_quality_badge_bg");
             qualityBg.type = Image.Type.Sliced;
-            qualityBg.color = QualityColor(config != null ? config.Rarity : 0);
+            qualityBg.color = Color.white;
             Text quality = NewText("QualityText", qualityGO.transform, QualityName(config != null ? config.Rarity : 0), 16, TextAnchor.MiddleCenter, Color.white);
             quality.fontStyle = FontStyle.Bold;
             Stretch(quality.rectTransform);
@@ -552,9 +674,9 @@ public sealed class PetPanelUI : MonoBehaviour
             rt.anchoredPosition = center + new Vector2((i - 1.5f) * (width + 10f), 0f);
             rt.sizeDelta = new Vector2(width, height);
             Image img = slot.AddComponent<Image>();
-            img.sprite = LoadSprite("UI/Pets/Button_Back");
+            img.sprite = LoadSprite("UI/Pets/pet_talent_slot_bg");
             img.type = Image.Type.Sliced;
-            img.color = i < count ? TalentColor(pet.Talents[i].Rarity) : new Color(0.26f, 0.27f, 0.23f, 0.72f);
+            img.color = Color.white;
             Button slotButton = slot.AddComponent<Button>();
 
             string label = "?";
@@ -602,7 +724,7 @@ public sealed class PetPanelUI : MonoBehaviour
 
             Image img = slot.GetComponent<Image>();
             if (img != null)
-                img.color = i < count ? TalentColor(pet.Talents[i].Rarity) : new Color(0.26f, 0.27f, 0.23f, 0.72f);
+                img.color = Color.white;
 
             Button slotButton = slot.GetComponent<Button>() ?? slot.gameObject.AddComponent<Button>();
             slotButton.onClick.RemoveAllListeners();
@@ -650,7 +772,7 @@ public sealed class PetPanelUI : MonoBehaviour
         tipRt.sizeDelta = new Vector2(154f, 60f);
 
         Image bg = _talentTip.AddComponent<Image>();
-        bg.sprite = LoadSprite("UI/Pets/Card_Back");
+        bg.sprite = LoadSprite("UI/Pets/pet_card_bg");
         bg.type = Image.Type.Sliced;
         bg.color = new Color(0.12f, 0.20f, 0.17f, 0.94f);
 
@@ -689,9 +811,9 @@ public sealed class PetPanelUI : MonoBehaviour
             GameObject slot = NewUI("GridSlot_" + i, parent);
             SetRect(slot.GetComponent<RectTransform>(), pos, new Vector2(cell, cell), new Vector2(0f, 1f));
             Image bg = slot.AddComponent<Image>();
-            bg.sprite = LoadSprite("UI/Pets/Card_Back");
+            bg.sprite = LoadSprite("UI/Pets/pet_slot_bg");
             bg.type = Image.Type.Sliced;
-            bg.color = new Color(0.42f, 0.39f, 0.32f, 0.95f);
+            bg.color = Color.white;
 
             if (i >= pets.Count)
             {
@@ -703,16 +825,16 @@ public sealed class PetPanelUI : MonoBehaviour
             PetInstance pet = pets[i];
             PetConfig config = PetSystemManager.Instance.GetPetConfig(pet.PetId);
             Image icon = NewUI("Icon", slot.transform).AddComponent<Image>();
-            icon.sprite = LoadPetSprite(config);
+            icon.sprite = LoadPetAvatarSprite(config);
             icon.preserveAspect = true;
             Stretch(icon.rectTransform, 4f, 4f, 4f, 4f);
 
             GameObject qualityGO = NewUI("Quality", slot.transform);
             SetRect(qualityGO.GetComponent<RectTransform>(), new Vector2(18f, -12f), new Vector2(34f, 22f), new Vector2(0f, 1f));
             Image qualityBg = qualityGO.AddComponent<Image>();
-            qualityBg.sprite = LoadSprite("UI/Pets/Button_Back");
+            qualityBg.sprite = LoadSprite("UI/Pets/pet_quality_badge_bg");
             qualityBg.type = Image.Type.Sliced;
-            qualityBg.color = QualityColor(config != null ? config.Rarity : 0);
+            qualityBg.color = Color.white;
             Text quality = NewText("Label", qualityGO.transform, ShortQualityName(config != null ? config.Rarity : 0), 13, TextAnchor.MiddleCenter, Color.white);
             quality.fontStyle = FontStyle.Bold;
             Stretch(quality.rectTransform);
@@ -877,16 +999,16 @@ public sealed class PetPanelUI : MonoBehaviour
             PetInstance pet = pets[i];
             PetConfig config = PetSystemManager.Instance.GetPetConfig(pet.PetId);
             Image icon = NewUI("Icon", slot).AddComponent<Image>();
-            icon.sprite = LoadPetSprite(config);
+            icon.sprite = LoadPetAvatarSprite(config);
             icon.preserveAspect = true;
             Stretch(icon.rectTransform, 4f, 4f, 4f, 4f);
 
             GameObject qualityGO = NewUI("Quality", slot);
             SetRect(qualityGO.GetComponent<RectTransform>(), new Vector2(18f, -12f), new Vector2(34f, 22f), new Vector2(0f, 1f));
             Image qualityBg = qualityGO.AddComponent<Image>();
-            qualityBg.sprite = LoadSprite("UI/Pets/Button_Back");
+            qualityBg.sprite = LoadSprite("UI/Pets/pet_quality_badge_bg");
             qualityBg.type = Image.Type.Sliced;
-            qualityBg.color = QualityColor(config != null ? config.Rarity : 0);
+            qualityBg.color = Color.white;
             Text quality = NewText("Label", qualityGO.transform, ShortQualityName(config != null ? config.Rarity : 0), 13, TextAnchor.MiddleCenter, Color.white);
             quality.fontStyle = FontStyle.Bold;
             Stretch(quality.rectTransform);
@@ -1005,8 +1127,62 @@ public sealed class PetPanelUI : MonoBehaviour
         return LoadSprite("UI/Pets/" + resource) ?? LoadSprite("UI/Pets/Pet_Empty");
     }
 
+    Sprite LoadPetAvatarSprite(PetConfig config)
+    {
+        string resource = config != null && !string.IsNullOrEmpty(config.PetResource) ? config.PetResource : "";
+        string id = ExtractPetId(resource);
+        if (!string.IsNullOrEmpty(id))
+        {
+            Sprite avatar = LoadSprite("Sprites/Avatar/Pet/Pet_Avatar_" + id);
+            if (avatar != null) return avatar;
+        }
+
+        return LoadPetSprite(config);
+    }
+
+    static string ExtractPetId(string resource)
+    {
+        if (string.IsNullOrWhiteSpace(resource)) return "";
+
+        string digits = "";
+        for (int i = 0; i < resource.Length; i++)
+        {
+            if (char.IsDigit(resource[i]))
+                digits += resource[i];
+        }
+
+        return digits;
+    }
+
+    void AnimatePortrait(Transform parent, PetConfig config)
+    {
+        if (parent == null) return;
+
+        Image portrait = parent.Find("Portrait")?.GetComponent<Image>();
+        if (portrait == null) return;
+
+        Sprite frame = LoadPetIdleFrame(config);
+        if (frame == null) return;
+
+        portrait.sprite = frame;
+        portrait.preserveAspect = true;
+    }
+
+    Sprite LoadPetIdleFrame(PetConfig config)
+    {
+        string resource = config != null && !string.IsNullOrEmpty(config.PetResource) ? config.PetResource : "";
+        Sprite[] frames = PetPortraitAnimationSet.LoadIdle(resource);
+        if (frames == null || frames.Length == 0) return null;
+
+        int frameIndex = Mathf.FloorToInt(Time.unscaledTime * PortraitIdleFps) % frames.Length;
+        return frames[frameIndex];
+    }
+
     Sprite LoadSprite(string path)
     {
+        Sprite sprite = Resources.Load<Sprite>(path);
+        if (sprite != null) return sprite;
+
         Texture2D texture = Resources.Load<Texture2D>(path);
         if (texture == null) return null;
         return Sprite.Create(texture, new Rect(0, 0, texture.width, texture.height), new Vector2(0.5f, 0.5f), 100f);
@@ -1017,9 +1193,9 @@ public sealed class PetPanelUI : MonoBehaviour
         GameObject go = NewUI(name, parent);
         SetRect(go.GetComponent<RectTransform>(), pos, size, new Vector2(0f, 1f));
         Image image = go.AddComponent<Image>();
-        image.sprite = LoadSprite("UI/Pets/Card_Back");
+        image.sprite = LoadSprite("UI/Pets/pet_card_bg");
         image.type = Image.Type.Sliced;
-        image.color = PaperSoft;
+        image.color = Color.white;
         return go;
     }
 
@@ -1033,7 +1209,7 @@ public sealed class PetPanelUI : MonoBehaviour
         GameObject go = NewUI(name, parent);
         SetRect(go.GetComponent<RectTransform>(), pos, size, anchor);
         Image image = go.AddComponent<Image>();
-        image.sprite = LoadSprite("UI/Pets/Button_Back");
+        image.sprite = LoadSprite("UI/Pets/pet_button_bg");
         image.type = Image.Type.Sliced;
         image.color = bg;
         Button button = go.AddComponent<Button>();
@@ -1108,4 +1284,49 @@ public sealed class PetPanelUI : MonoBehaviour
 
     return Resources.GetBuiltinResource<Font>("Arial.ttf");
 }
+
+    sealed class PetPortraitAnimationSet
+    {
+        const string CurrentResourceRoot = "Sprites/PetsAnim";
+        const string LegacyResourceRoot = "Sprites/Pets";
+        static readonly Dictionary<string, Sprite[]> IdleCache = new Dictionary<string, Sprite[]>();
+
+        public static Sprite[] LoadIdle(string resource)
+        {
+            if (string.IsNullOrWhiteSpace(resource)) return null;
+
+            string id = resource.Trim();
+            if (IdleCache.TryGetValue(id, out Sprite[] cached))
+                return cached;
+
+            Sprite[] allFrames = LoadAllFrames(CurrentResourceRoot, id);
+            if (allFrames == null || allFrames.Length == 0)
+                allFrames = LoadAllFrames(LegacyResourceRoot, id);
+
+            Sprite[] idleFrames = FilterFrames(allFrames, id + "_Idle_");
+            IdleCache[id] = idleFrames;
+            return idleFrames;
+        }
+
+        static Sprite[] LoadAllFrames(string root, string id)
+        {
+            return Resources.LoadAll<Sprite>(root + "/" + id);
+        }
+
+        static Sprite[] FilterFrames(Sprite[] frames, string prefix)
+        {
+            if (frames == null || frames.Length == 0) return null;
+
+            var list = new List<Sprite>();
+            for (int i = 0; i < frames.Length; i++)
+            {
+                Sprite sprite = frames[i];
+                if (sprite != null && sprite.name.StartsWith(prefix, System.StringComparison.OrdinalIgnoreCase))
+                    list.Add(sprite);
+            }
+
+            list.Sort((a, b) => string.CompareOrdinal(a.name, b.name));
+            return list.ToArray();
+        }
+    }
 }
