@@ -1,0 +1,324 @@
+{
+  "canvas": {
+    "width": 1024,
+    "height": 768
+  },
+  "coordinate_system": "top-left origin; positions are x,y,width,height in pixels on 1024x768 reference canvas",
+  "assets_note": "All UI art PNG files are RGBA with transparent exterior where appropriate. Text should be created in Unity/TextMeshPro so values can be dynamic.",
+  "sprites": [
+    {
+      "name": "panel_main",
+      "file": "core/panel_main_936x680.png",
+      "rect": [
+        44,
+        56,
+        936,
+        680
+      ]
+    },
+    {
+      "name": "title_banner",
+      "file": "core/title_banner_376x86.png",
+      "rect": [
+        324,
+        18,
+        376,
+        86
+      ],
+      "text": "仙树升级",
+      "text_anchor": "center"
+    },
+    {
+      "name": "close_button",
+      "file": "core/close_button_54x54.png",
+      "rect": [
+        928,
+        62,
+        54,
+        54
+      ]
+    },
+    {
+      "name": "tab_current",
+      "file": "table/tab_current_240x50.png",
+      "rect": [
+        214,
+        132,
+        240,
+        50
+      ],
+      "text": "当前等级:3"
+    },
+    {
+      "name": "tab_next",
+      "file": "table/tab_next_240x50.png",
+      "rect": [
+        460,
+        132,
+        240,
+        50
+      ],
+      "text": "下一等级:4"
+    },
+    {
+      "name": "table_rows",
+      "files": [
+        "table/table_row_rough_594x50.png",
+        "table/table_row_normal_594x50.png",
+        "table/table_row_fine_594x50.png",
+        "table/table_row_excellent_594x50.png",
+        "table/table_row_epic_594x50.png",
+        "table/table_row_legendary_594x50.png"
+      ],
+      "rects": [
+        [
+          90,
+          178,
+          594,
+          50
+        ],
+        [
+          90,
+          228,
+          594,
+          50
+        ],
+        [
+          90,
+          278,
+          594,
+          50
+        ],
+        [
+          90,
+          328,
+          594,
+          50
+        ],
+        [
+          90,
+          378,
+          594,
+          50
+        ],
+        [
+          90,
+          428,
+          594,
+          50
+        ]
+      ]
+    },
+    {
+      "name": "table_outer_frame",
+      "file": "table/table_outer_frame_594x310.png",
+      "rect": [
+        90,
+        178,
+        594,
+        310
+      ]
+    },
+    {
+      "name": "time_panel",
+      "file": "core/time_panel_250x116.png",
+      "rect": [
+        724,
+        188,
+        250,
+        116
+      ],
+      "texts": [
+        {
+          "text": "升级所需时间",
+          "pos": [
+            849,
+            234
+          ],
+          "anchor": "center"
+        },
+        {
+          "text": "00:30:00",
+          "pos": [
+            849,
+            272
+          ],
+          "anchor": "center"
+        }
+      ]
+    },
+    {
+      "name": "coin_icon",
+      "file": "icons/coin_42x42.png",
+      "rect": [
+        724,
+        338,
+        42,
+        42
+      ]
+    },
+    {
+      "name": "upgrade_button",
+      "file": "buttons/upgrade_button_normal_246x82.png",
+      "rect": [
+        724,
+        410,
+        246,
+        82
+      ],
+      "text": "升级"
+    },
+    {
+      "name": "unlock_preview_panel",
+      "file": "core/unlock_preview_panel_850x170.png",
+      "rect": [
+        87,
+        540,
+        850,
+        170
+      ],
+      "text": "升级后，持续将有概率额外产出道具"
+    }
+  ],
+  "table_text": {
+    "labels": [
+      "粗糙",
+      "普通",
+      "精良",
+      "优质",
+      "史诗",
+      "传世"
+    ],
+    "current": [
+      "42%",
+      "30%",
+      "22%",
+      "5.4%",
+      "0.6%",
+      "0%"
+    ],
+    "next": [
+      "31%",
+      "34.99%",
+      "26%",
+      "7.01%",
+      "0.9%",
+      "0.1%"
+    ],
+    "row_centers_y": [
+      203,
+      253,
+      303,
+      353,
+      403,
+      453
+    ],
+    "label_center_x": 154,
+    "current_center_x": 362,
+    "next_center_x": 590
+  },
+  "unlock_items": [
+    {
+      "slot_file": "slots/item_slot_green_100x100.png",
+      "icon_file": "icons/item_scroll_82x82.png",
+      "slot_rect": [
+        122,
+        602,
+        100,
+        100
+      ],
+      "icon_rect": [
+        131,
+        611,
+        82,
+        82
+      ],
+      "label": "已解锁"
+    },
+    {
+      "slot_file": "slots/item_slot_purple_100x100.png",
+      "icon_file": "icons/item_bamboo_slips_82x82.png",
+      "slot_rect": [
+        255,
+        602,
+        100,
+        100
+      ],
+      "icon_rect": [
+        264,
+        611,
+        82,
+        82
+      ],
+      "label": "5级解锁"
+    },
+    {
+      "slot_file": "slots/item_slot_blue_100x100.png",
+      "icon_file": "icons/item_spirit_fruit_82x82.png",
+      "slot_rect": [
+        388,
+        602,
+        100,
+        100
+      ],
+      "icon_rect": [
+        397,
+        611,
+        82,
+        82
+      ],
+      "label": "7级解锁"
+    },
+    {
+      "slot_file": "slots/item_slot_gold_100x100.png",
+      "icon_file": "icons/item_jade_tag_82x82.png",
+      "slot_rect": [
+        521,
+        602,
+        100,
+        100
+      ],
+      "icon_rect": [
+        530,
+        611,
+        82,
+        82
+      ],
+      "label": "9级解锁"
+    },
+    {
+      "slot_file": "slots/item_slot_purple_100x100.png",
+      "icon_file": "icons/item_purple_flower_82x82.png",
+      "slot_rect": [
+        654,
+        602,
+        100,
+        100
+      ],
+      "icon_rect": [
+        663,
+        611,
+        82,
+        82
+      ],
+      "label": "11级解锁"
+    },
+    {
+      "slot_file": "slots/item_slot_red_100x100.png",
+      "icon_file": "icons/item_jade_pendant_82x82.png",
+      "slot_rect": [
+        787,
+        602,
+        100,
+        100
+      ],
+      "icon_rect": [
+        796,
+        611,
+        82,
+        82
+      ],
+      "label": "16级解锁"
+    }
+  ]
+}

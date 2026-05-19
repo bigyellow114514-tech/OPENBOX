@@ -15,19 +15,14 @@ public class TreeUpgradeUI : MonoBehaviour
     [SerializeField] float barGap        = 24f;
 
     Texture2D _btnNormalTex;
-    Texture2D _btnDisabledTex;
     Texture2D _btnHoverTex;
 
     GUIStyle _btnStyle;
-    GUIStyle _btnDisabledStyle;
-    GUIStyle _maxStyle;
-
     static Font _uiFont;
 
     void Start()
     {
         _btnNormalTex   = MakeTex(new Color(0.50f, 0.32f, 0.04f, 1f));
-        _btnDisabledTex = MakeTex(new Color(0.22f, 0.22f, 0.22f, 1f));
         _btnHoverTex    = MakeTex(new Color(0.70f, 0.48f, 0.08f, 1f));
     }
 
@@ -48,28 +43,10 @@ public class TreeUpgradeUI : MonoBehaviour
             active    = { background = _btnNormalTex, textColor = Color.white },
         };
 
-        _btnDisabledStyle = new GUIStyle(_btnStyle)
-        {
-            normal = { background = _btnDisabledTex, textColor = new Color(0.55f, 0.55f, 0.55f) },
-            hover  = { background = _btnDisabledTex, textColor = new Color(0.55f, 0.55f, 0.55f) },
-        };
-
-        _maxStyle = new GUIStyle(GUI.skin.label)
-        {
-            fontSize  = 12,
-            fontStyle = FontStyle.Bold,
-            alignment = TextAnchor.MiddleCenter,
-            font      = font,
-            normal    = { textColor = new Color(1f, 0.82f, 0.3f) },
-        };
     }
 
     void OnGUI()
     {
-        var treeMgr = TreeExpManager.Instance;
-        var resMgr  = PlayerResourceManager.Instance;
-        if (treeMgr == null || resMgr == null) return;
-
         InitStyles();
 
         // Mirror ExpBarUI layout to land exactly on the old tree bar position
@@ -87,22 +64,10 @@ public class TreeUpgradeUI : MonoBehaviour
         float bx = narrow ? startX + labelWidth : startX + labelWidth + barW + barGap + labelWidth;
         float by = area.y + (narrow ? 82f + barHeight + 8f : topOffset);
 
-        bool isMax     = treeMgr.UpgradeTier >= TreeExpManager.MaxUpgradeTier;
-        int  cost      = treeMgr.GetNextUpgradeCost();
-        bool canAfford = !isMax && resMgr.Gold >= cost;
-
         var rect = new Rect(bx, by, barW, barHeight);
 
-        if (isMax)
-        {
-            GUI.Label(rect, "大树已满级", _maxStyle);
-        }
-        else
-        {
-            string label = $"升级大树  {cost:N0}金";
-            if (GUI.Button(rect, label, canAfford ? _btnStyle : _btnDisabledStyle) && canAfford)
-                treeMgr.TryUpgrade();
-        }
+        if (GUI.Button(rect, "升级大树", _btnStyle))
+            TreeUpgradePanelUI.ShowOrCreate();
         }
         finally
         {

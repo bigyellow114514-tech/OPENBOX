@@ -135,7 +135,7 @@ public sealed class PetSystemManager : MonoBehaviour
             return false;
         }
 
-        if (_petConfigs.Count == 0)
+        if (_petConfigs.Count == 0 || GetTotalGachaWeight() <= 0f)
         {
             reason = "没有可抽取宠物配置";
             return false;
@@ -148,10 +148,9 @@ public sealed class PetSystemManager : MonoBehaviour
     public PetInstance Gacha()
     {
         if (!CanGacha(out _)) return null;
-        if (!PlayerResourceManager.Instance.SpendPetTickets(GachaTicketCost)) return null;
-
         PetConfig config = PickPetConfig();
         if (config == null) return null;
+        if (!PlayerResourceManager.Instance.SpendPetTickets(GachaTicketCost)) return null;
 
         var pet = CreatePetInstance(config);
         _pets.Add(pet);
@@ -386,6 +385,7 @@ public sealed class PetSystemManager : MonoBehaviour
             _petConfigs[petId] = new PetConfig
             {
                 PetId = petId,
+                GachaWeight = Mathf.Max(0f, row.GetFloat(columns, "GachaWeight")),
                 PetResource = row.Get(columns, "PetResource"),
                 PetName = row.Get(columns, "PetName"),
                 Rarity = Mathf.Max(1, row.GetInt(columns, "Rarity", 1)),
@@ -536,9 +536,27 @@ public sealed class PetSystemManager : MonoBehaviour
 
     PetConfig PickPetConfig()
     {
+        float totalWeight = GetTotalGachaWeight();
+        if (totalWeight <= 0f)
+            return null;
+
+        float roll = UnityEngine.Random.Range(0f, totalWeight);
         foreach (PetConfig config in _petConfigs.Values)
-            return config;
+        {
+            roll -= Mathf.Max(0f, config.GachaWeight);
+            if (roll <= 0f)
+                return config;
+        }
+
         return null;
+    }
+
+    float GetTotalGachaWeight()
+    {
+        float totalWeight = 0f;
+        foreach (PetConfig config in _petConfigs.Values)
+            totalWeight += Mathf.Max(0f, config.GachaWeight);
+        return totalWeight;
     }
 
     PetInstance CreatePetInstance(PetConfig config)
@@ -633,9 +651,9 @@ public sealed class PetSystemManager : MonoBehaviour
     {
         if (_petConfigs.Count == 0)
         {
-            _petConfigs[101] = new PetConfig { PetId = 101, PetName = "输出宝宝", PetResource = "Pet_101", Rarity = 1, Description = "攻击型宠物" };
-            _petConfigs[102] = new PetConfig { PetId = 102, PetName = "奶妈宝宝", PetResource = "Pet_102", Rarity = 2, Description = "治疗型宠物" };
-            _petConfigs[103] = new PetConfig { PetId = 103, PetName = "暴击宝宝", PetResource = "Pet_103", Rarity = 3, Description = "增益型宠物" };
+            _petConfigs[101] = new PetConfig { PetId = 101, GachaWeight = 1f, PetName = "输出宝宝", PetResource = "Pet_101", Rarity = 1, Description = "攻击型宠物" };
+            _petConfigs[102] = new PetConfig { PetId = 102, GachaWeight = 1f, PetName = "奶妈宝宝", PetResource = "Pet_102", Rarity = 2, Description = "治疗型宠物" };
+            _petConfigs[103] = new PetConfig { PetId = 103, GachaWeight = 1f, PetName = "暴击宝宝", PetResource = "Pet_103", Rarity = 3, Description = "增益型宠物" };
         }
 
         if (_talentPool.Count == 0)
@@ -689,6 +707,7 @@ public sealed class PetSaveData
 public sealed class PetConfig
 {
     public int PetId;
+    public float GachaWeight;
     public string PetResource;
     public string PetName;
     public int Rarity;
