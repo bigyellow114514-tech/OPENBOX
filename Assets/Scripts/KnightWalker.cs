@@ -4,6 +4,7 @@ using UnityEngine;
 public class KnightWalker : MonoBehaviour
 {
     public static KnightWalker Instance { get; private set; }
+    public const float ChopCycleDuration = 0.35f;
 
     [Header("Walking")]
     public float walkSpeed = 1.5f;
@@ -15,9 +16,9 @@ public class KnightWalker : MonoBehaviour
     [Header("Tree Chop")]
     public Sprite[] treeChopFrames;
     public string treeChopFramesResourcePath = "Sprites/KnightChopTree";
-    public float chopCycleDuration = 0.3f;
     public Vector2 chopPositionXRange = new Vector2(1.75f, 4.15f);
     public Vector2 chopPositionYRange = new Vector2(-3.5f, -2f);
+    public Vector2 chopHitVfxOffset = new Vector2(0.55f, 0.65f);
 
     [Header("Walk Segment")]
     public float minWalkTime = 1.0f;
@@ -213,6 +214,13 @@ public class KnightWalker : MonoBehaviour
         return 2 + Mathf.Max(0, rarityIndex);
     }
 
+    public Vector3 GetTreeChopHitVfxPosition()
+    {
+        float facingSign = _sr != null && _sr.flipX ? -1f : 1f;
+        Vector3 offset = new Vector3(chopHitVfxOffset.x * facingSign, chopHitVfxOffset.y, 0f);
+        return transform.position + offset;
+    }
+
     public Coroutine PlayTreeChop(int rarityIndex)
     {
         if (_chopRoutine != null) StopCoroutine(_chopRoutine);
@@ -246,7 +254,7 @@ public class KnightWalker : MonoBehaviour
         _sr.flipX = x >= centerX;
 
         int cycles = GetTreeChopCycleCount(rarityIndex);
-        float frameDuration = Mathf.Max(0.01f, chopCycleDuration) / treeChopFrames.Length;
+        float frameDuration = Mathf.Max(0.01f, ChopCycleDuration) / treeChopFrames.Length;
 
         for (int cycle = 0; cycle < cycles; cycle++)
         {

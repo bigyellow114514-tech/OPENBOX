@@ -3331,7 +3331,10 @@ MonoBehaviour:
   - {fileID: 21300000, guid: 7ffee5e2caa507e48a562f710881cc06, type: 3}
   groundYOffset: -3
   boxSizeMultiplier: 0.25
-  treeShakeDuration: 0.32
+  chopHitVfxPrefab: {fileID: 5560822588569395165, guid: 8f2074d891da615409ed8d4cbfc9078a, type: 3}
+  chopHitVfxScale: 50
+  chopHitVfxSortingOrder: 1000
+  chopHitVfxZOffset: -0.5
 --- !u!114 &200000006
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -9898,9 +9901,9 @@ MonoBehaviour:
   walkFramesResourcePath: Sprites/KnightWalk6
   treeChopFrames: []
   treeChopFramesResourcePath: Sprites/KnightChopTree
-  chopCycleDuration: 1
   chopPositionXRange: {x: 1.75, y: 4.15}
   chopPositionYRange: {x: -3.5, y: -2}
+  chopHitVfxOffset: {x: 0.55, y: 0.65}
   minWalkTime: 1
   maxWalkTime: 4
   minIdleTime: 0.8

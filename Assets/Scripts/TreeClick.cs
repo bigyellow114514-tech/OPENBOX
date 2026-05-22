@@ -8,7 +8,10 @@ public class TreeClick : MonoBehaviour
     [SerializeField] Sprite[] boxSprites;
     [SerializeField] float groundYOffset = 0f;
     [SerializeField] float boxSizeMultiplier = 0.12f;
-    [SerializeField] float treeShakeDuration = 0.32f;
+    [SerializeField] GameObject chopHitVfxPrefab;
+    [SerializeField] float chopHitVfxScale = 50f;
+    [SerializeField] int chopHitVfxSortingOrder = 1000;
+    [SerializeField] float chopHitVfxZOffset = -0.5f;
 
     static readonly (float normalizedTime, float sx, float sy)[] Keyframes =
     {
@@ -142,25 +145,65 @@ public class TreeClick : MonoBehaviour
 
     IEnumerator PlayTreeShakeSequence(int cycles)
     {
-        float cycleDuration = KnightWalker.Instance != null
-            ? Mathf.Max(0.01f, KnightWalker.Instance.chopCycleDuration)
-            : Mathf.Max(0.01f, treeShakeDuration * 2f);
-        float delayBeforeShake = cycleDuration * 0.5f;
+        float cycleDuration = Mathf.Max(0.01f, KnightWalker.ChopCycleDuration);
+        float treeShakeDuration = cycleDuration * 0.5f;
+        float startedAt = Time.time;
+        Coroutine lastShake = null;
 
         for (int i = 0; i < cycles; i++)
         {
-            yield return new WaitForSeconds(delayBeforeShake);
-            yield return StartCoroutine(PunchScale());
-            float rest = cycleDuration - delayBeforeShake - treeShakeDuration;
-            if (rest > 0f)
-                yield return new WaitForSeconds(rest);
+            float shakeStartTime = startedAt + (i + 0.5f) * cycleDuration;
+            float wait = shakeStartTime - Time.time;
+            if (wait > 0f)
+                yield return new WaitForSeconds(wait);
+
+            PlayChopHitVfx();
+            lastShake = StartCoroutine(PunchScale());
+        }
+
+        float sequenceEndTime = startedAt + cycles * cycleDuration;
+        float remaining = sequenceEndTime - Time.time;
+        if (remaining > 0f)
+            yield return new WaitForSeconds(remaining);
+
+        if (lastShake != null)
+            yield return lastShake;
+    }
+
+    void PlayChopHitVfx()
+    {
+        if (chopHitVfxPrefab == null || KnightWalker.Instance == null) return;
+
+        Vector3 position = KnightWalker.Instance.GetTreeChopHitVfxPosition();
+        position.z += chopHitVfxZOffset;
+        GameObject instance = Instantiate(chopHitVfxPrefab, position, Quaternion.identity);
+        instance.transform.localScale = Vector3.one * chopHitVfxScale;
+        ConfigureChopHitVfxInstance(instance);
+        Destroy(instance, 1.2f);
+    }
+
+    void ConfigureChopHitVfxInstance(GameObject instance)
+    {
+        if (instance == null) return;
+
+        ParticleSystemRenderer[] renderers = instance.GetComponentsInChildren<ParticleSystemRenderer>(true);
+        for (int i = 0; i < renderers.Length; i++)
+            renderers[i].sortingOrder = chopHitVfxSortingOrder;
+
+        ParticleSystem[] particleSystems = instance.GetComponentsInChildren<ParticleSystem>(true);
+        for (int i = 0; i < particleSystems.Length; i++)
+        {
+            ParticleSystem.MainModule main = particleSystems[i].main;
+            main.scalingMode = ParticleSystemScalingMode.Hierarchy;
+            particleSystems[i].Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            particleSystems[i].Play(true);
         }
     }
 
     IEnumerator PunchScale()
     {
         float elapsed = 0f;
-        float total = Mathf.Max(0.01f, treeShakeDuration);
+        float total = Mathf.Max(0.01f, KnightWalker.ChopCycleDuration * 0.5f);
 
         while (elapsed < total)
         {
