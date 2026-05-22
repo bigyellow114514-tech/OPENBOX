@@ -3,12 +3,21 @@ using UnityEngine;
 [RequireComponent(typeof(SpriteRenderer))]
 public class KnightWalker : MonoBehaviour
 {
+    public static KnightWalker Instance { get; private set; }
+
     [Header("Walking")]
     public float walkSpeed = 1.5f;
     public float screenEdgeMargin = 0.08f;
     public Sprite[] walkFrames;
     public float walkFrameRate = 10f;
     public string walkFramesResourcePath = "Sprites/KnightWalk6";
+
+    [Header("Tree Chop")]
+    public Sprite[] treeChopFrames;
+    public string treeChopFramesResourcePath = "Sprites/KnightChopTree";
+    public float chopCycleDuration = 0.3f;
+    public Vector2 chopPositionXRange = new Vector2(1.75f, 4.15f);
+    public Vector2 chopPositionYRange = new Vector2(-3.5f, -2f);
 
     [Header("Walk Segment")]
     public float minWalkTime = 1.0f;
@@ -28,10 +37,11 @@ public class KnightWalker : MonoBehaviour
     public float shadowScaleY  = 0.12f;
     public Vector2 shadowOffset = new Vector2(0f, -0.45f);
 
-    enum State { Walking, Idle }
+    enum State { Walking, Idle, Chopping }
 
     SpriteRenderer _sr;
     SpriteRenderer _shadow;
+    Coroutine      _chopRoutine;
     Vector3        _baseScale;
     float          _baseY;
     State          _state;
@@ -45,9 +55,21 @@ public class KnightWalker : MonoBehaviour
 
     void Awake()
     {
+        if (Instance != null && Instance != this)
+        {
+            Debug.LogWarning("[KnightWalker] Multiple instances found. The latest instance will handle tree chopping.");
+        }
+        Instance = this;
+
         _sr        = GetComponent<SpriteRenderer>();
         _baseScale = transform.localScale;
         LoadWalkFramesIfNeeded();
+        LoadTreeChopFramesIfNeeded();
+    }
+
+    void OnDestroy()
+    {
+        if (Instance == this) Instance = null;
     }
 
     void Start()
@@ -90,6 +112,7 @@ public class KnightWalker : MonoBehaviour
         {
             case State.Walking: UpdateWalking(); break;
             case State.Idle:    UpdateIdle();    break;
+            case State.Chopping: break;
         }
 
         transform.localScale = _baseScale;
@@ -175,6 +198,73 @@ public class KnightWalker : MonoBehaviour
 
         _animIndex = Mathf.Clamp(index, 0, walkFrames.Length - 1);
         _sr.sprite = walkFrames[_animIndex];
+    }
+
+    void LoadTreeChopFramesIfNeeded()
+    {
+        if (treeChopFrames != null && treeChopFrames.Length > 0) return;
+
+        treeChopFrames = Resources.LoadAll<Sprite>(treeChopFramesResourcePath);
+        System.Array.Sort(treeChopFrames, (a, b) => string.CompareOrdinal(a.name, b.name));
+    }
+
+    public int GetTreeChopCycleCount(int rarityIndex)
+    {
+        return 2 + Mathf.Max(0, rarityIndex);
+    }
+
+    public Coroutine PlayTreeChop(int rarityIndex)
+    {
+        if (_chopRoutine != null) StopCoroutine(_chopRoutine);
+        _chopRoutine = StartCoroutine(PlayTreeChopSequence(rarityIndex));
+        return _chopRoutine;
+    }
+
+    public System.Collections.IEnumerator PlayTreeChopSequence(int rarityIndex)
+    {
+        LoadTreeChopFramesIfNeeded();
+        if (treeChopFrames == null || treeChopFrames.Length == 0)
+        {
+            Debug.LogWarning("[KnightWalker] Tree chop frames are missing.");
+            yield break;
+        }
+
+        yield return TreeChopRoutine(Mathf.Max(0, rarityIndex));
+    }
+
+    System.Collections.IEnumerator TreeChopRoutine(int rarityIndex)
+    {
+        _state = State.Chopping;
+        _bobPhase = 0f;
+        _animTimer = 0f;
+
+        float x = Random.Range(chopPositionXRange.x, chopPositionXRange.y);
+        float y = Random.Range(chopPositionYRange.x, chopPositionYRange.y);
+        transform.position = new Vector3(x, y, transform.position.z);
+
+        float centerX = (chopPositionXRange.x + chopPositionXRange.y) * 0.5f;
+        _sr.flipX = x >= centerX;
+
+        int cycles = GetTreeChopCycleCount(rarityIndex);
+        float frameDuration = Mathf.Max(0.01f, chopCycleDuration) / treeChopFrames.Length;
+
+        for (int cycle = 0; cycle < cycles; cycle++)
+        {
+            for (int frameIndex = 0; frameIndex < treeChopFrames.Length; frameIndex++)
+            {
+                _sr.sprite = treeChopFrames[frameIndex];
+                UpdateShadow();
+                yield return new WaitForSeconds(frameDuration);
+            }
+        }
+
+        _chopRoutine = null;
+        var pos = transform.position;
+        pos.y = _baseY;
+        transform.position = pos;
+        transform.localScale = _baseScale;
+        SetWalkFrame(0);
+        EnterWalk(_sr.flipX ? -1f : 1f);
     }
 
     void UpdateShadow()
