@@ -3331,6 +3331,7 @@ MonoBehaviour:
   - {fileID: 21300000, guid: 7ffee5e2caa507e48a562f710881cc06, type: 3}
   groundYOffset: -3
   boxSizeMultiplier: 0.25
+  treeShakeDuration: 0.32
 --- !u!114 &200000006
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -9892,13 +9893,19 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   walkSpeed: 1.5
   screenEdgeMargin: 0.08
+  walkFrames: []
+  walkFrameRate: 10
+  walkFramesResourcePath: Sprites/KnightWalk6
+  treeChopFrames: []
+  treeChopFramesResourcePath: Sprites/KnightChopTree
+  chopCycleDuration: 1
+  chopPositionXRange: {x: 1.75, y: 4.15}
+  chopPositionYRange: {x: -3.5, y: -2}
   minWalkTime: 1
   maxWalkTime: 4
   minIdleTime: 0.8
   maxIdleTime: 3
   idleChance: 0.45
-  breathAmplitude: 0.04
-  breathFrequency: 1.2
   bobAmplitude: 0.06
   bobFrequency: 2.5
   shadowAlpha: 0.35
