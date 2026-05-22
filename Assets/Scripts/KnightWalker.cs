@@ -6,6 +6,9 @@ public class KnightWalker : MonoBehaviour
     [Header("Walking")]
     public float walkSpeed = 1.5f;
     public float screenEdgeMargin = 0.08f;
+    public Sprite[] walkFrames;
+    public float walkFrameRate = 10f;
+    public string walkFramesResourcePath = "Sprites/KnightWalk6";
 
     [Header("Walk Segment")]
     public float minWalkTime = 1.0f;
@@ -15,10 +18,6 @@ public class KnightWalker : MonoBehaviour
     public float minIdleTime = 0.8f;
     public float maxIdleTime = 3.0f;
     public float idleChance = 0.45f;
-
-    [Header("Breathing")]
-    public float breathAmplitude = 0.04f;
-    public float breathFrequency  = 1.2f;
 
     [Header("Footstep Bob")]
     public float bobAmplitude  = 0.06f;
@@ -41,11 +40,14 @@ public class KnightWalker : MonoBehaviour
     float          _leftBound;
     float          _rightBound;
     float          _bobPhase;
+    float          _animTimer;
+    int            _animIndex;
 
     void Awake()
     {
         _sr        = GetComponent<SpriteRenderer>();
         _baseScale = transform.localScale;
+        LoadWalkFramesIfNeeded();
     }
 
     void Start()
@@ -90,7 +92,7 @@ public class KnightWalker : MonoBehaviour
             case State.Idle:    UpdateIdle();    break;
         }
 
-        Breathe();
+        transform.localScale = _baseScale;
         UpdateShadow();
     }
 
@@ -112,6 +114,8 @@ public class KnightWalker : MonoBehaviour
         var pos = transform.position;
         pos.y = _baseY + bob;
         transform.position = pos;
+
+        AnimateWalk();
     }
 
     void UpdateIdle()
@@ -123,6 +127,7 @@ public class KnightWalker : MonoBehaviour
         transform.position = pos;
 
         _bobPhase = 0f;
+        SetWalkFrame(0);
     }
 
     void EnterWalk(float dir)
@@ -141,14 +146,35 @@ public class KnightWalker : MonoBehaviour
 
     float RandomDir() => (Random.value < 0.4f) ? -_dir : _dir;
 
-    void Breathe()
+    void LoadWalkFramesIfNeeded()
     {
-        float offset = Mathf.Sin(Time.time * breathFrequency * Mathf.PI * 2f) * breathAmplitude;
-        transform.localScale = new Vector3(
-            _baseScale.x,
-            _baseScale.y * (1f + offset),
-            _baseScale.z
-        );
+        if (walkFrames != null && walkFrames.Length > 0) return;
+
+        walkFrames = Resources.LoadAll<Sprite>(walkFramesResourcePath);
+        System.Array.Sort(walkFrames, (a, b) => string.CompareOrdinal(a.name, b.name));
+        SetWalkFrame(0);
+    }
+
+    void AnimateWalk()
+    {
+        if (walkFrames == null || walkFrames.Length == 0) return;
+
+        _animTimer += Time.deltaTime;
+        float frameDuration = 1f / Mathf.Max(1f, walkFrameRate);
+        while (_animTimer >= frameDuration)
+        {
+            _animTimer -= frameDuration;
+            _animIndex = (_animIndex + 1) % walkFrames.Length;
+            SetWalkFrame(_animIndex);
+        }
+    }
+
+    void SetWalkFrame(int index)
+    {
+        if (walkFrames == null || walkFrames.Length == 0) return;
+
+        _animIndex = Mathf.Clamp(index, 0, walkFrames.Length - 1);
+        _sr.sprite = walkFrames[_animIndex];
     }
 
     void UpdateShadow()
@@ -156,6 +182,7 @@ public class KnightWalker : MonoBehaviour
         if (_shadow == null) return;
 
         _shadow.flipX = _sr.flipX;
+        _shadow.sprite = _sr.sprite;
 
         float rise        = (transform.position.y - _baseY) / (bobAmplitude + 0.001f);
         float scaleX      = Mathf.Lerp(1f, 0.75f, rise);

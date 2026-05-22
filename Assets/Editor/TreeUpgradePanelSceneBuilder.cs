@@ -7,7 +7,7 @@ public static class TreeUpgradePanelSceneBuilder
 {
     const string CanvasName = "TreeUpgradePanelCanvas";
 
-    [MenuItem("OpenBox/UI 构建/构建升级大树面板")]
+    [MenuItem("OpenBox/UI Build/Build Tree Upgrade Panel")]
     public static void BuildTreeUpgradePanelCanvas()
     {
         GameObject oldCanvas = GameObject.Find(CanvasName);

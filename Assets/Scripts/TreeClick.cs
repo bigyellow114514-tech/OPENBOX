@@ -45,6 +45,7 @@ public class TreeClick : MonoBehaviour
             SFXManager.PlayKanshu();
             StartCoroutine(PunchScale());
             SpawnBox();
+            AwardItemDrops();
             PlayerExpManager.Instance?.AddExp(10f);
         }
     }
@@ -55,7 +56,7 @@ public class TreeClick : MonoBehaviour
     {
         if (boxSprites == null || boxSprites.Length == 0) return;
 
-        int treeLevel = TreeExpManager.Instance != null ? TreeExpManager.Instance.Level : 1;
+        int treeLevel = TreeExpManager.Instance != null ? TreeExpManager.Instance.UpgradeLevel : 1;
         TreeExpManager.GetBoxWeights(treeLevel, _weightBuf);
 
         int count       = Mathf.Min(boxSprites.Length, 6);
@@ -78,6 +79,34 @@ public class TreeClick : MonoBehaviour
 
         TreeClick.Lock();
         go.AddComponent<BoxDropHelper>().StartDrop(groundY, rarityIndex);
+    }
+
+    void AwardItemDrops()
+    {
+        int treeLevel = TreeExpManager.Instance != null ? TreeExpManager.Instance.UpgradeLevel : 1;
+        var drops = TreeExpManager.RollItemDrops(treeLevel);
+        if (drops.Count == 0) return;
+
+        PlayerResourceManager resources = EnsureResourceManager();
+        for (int i = 0; i < drops.Count; i++)
+        {
+            TreeItemDrop drop = drops[i];
+            if (resources.AddItem(drop.ItemId, drop.Count))
+                Debug.Log($"[TreeClick] Drop item id={drop.ItemId}, count={drop.Count}");
+        }
+    }
+
+    static PlayerResourceManager EnsureResourceManager()
+    {
+        if (PlayerResourceManager.Instance != null)
+            return PlayerResourceManager.Instance;
+
+        var existing = FindObjectOfType<PlayerResourceManager>();
+        if (existing != null)
+            return existing;
+
+        var go = new GameObject("PlayerResourceManager");
+        return go.AddComponent<PlayerResourceManager>();
     }
 
     IEnumerator PunchScale()
